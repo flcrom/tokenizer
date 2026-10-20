@@ -1,0 +1,17 @@
+# @file .gitignore
+# @description Excludes generated caches, local environments, build output, and editor or operating-system artifacts.
+# @depends_on none
+# @depended_on_by none
+
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+dist/
+build/
+coverage/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
