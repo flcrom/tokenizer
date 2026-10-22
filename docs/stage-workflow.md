@@ -2,7 +2,7 @@
 @file docs/stage-workflow.md
 @description Defines the repeatable workflow for auditing, implementing, verifying, and learning from each challenge stage.
 @depends_on plan.md, collaboration-guide.md, docs/challenge-audit.md, learning/stage-journal.md
-@depended_on_by README.md, docs/README.md
+@depended_on_by README.md, docs/README.md, docs/harness-architecture.md
 -->
 
 # Stage workflow
@@ -37,11 +37,11 @@ The learner explains the core mechanism, traces a fresh example, and contributes
 
 Learning states are: `not_started`, `reviewing`, `explained`, or `signed_off`.
 
-## 7. Reconcile and continue
+## 7. Accept, reconcile, and continue
 
-Update the stage journal, decisions, metadata edges, file index, and known limitations. Run the metadata validator. Only then select the next stage.
+The learner decides whether the stage is satisfactory after reviewing the behavior and implementation. Update the stage journal, decisions, metadata edges, file index, and known limitations, then run the metadata validator. Only an accepted stage receives the curated CodeCrafters-style commit and tag; only then select the next stage.
 
 ## Definition of stage complete
 
-A stage is fully complete only when engineering status is `verified` and learning status is `signed_off`. Either state may advance without pretending the other has advanced.
+A stage is fully complete only when engineering status is `verified`, learning status is `signed_off`, and the learner has accepted the stage as satisfactory. Either status may advance without pretending the others have advanced.
 

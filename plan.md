@@ -2,7 +2,7 @@
 @file plan.md
 @description Defines the tokenizer project's learning outcomes, phased path, scope boundaries, and completion standards.
 @depends_on collaboration-guide.md
-@depended_on_by AGENTS.md, MEMORY.md, README.md, docs/README.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/research-plan.md, docs/version-control.md, learning/mental-model.md, learning/stage-journal.md
+@depended_on_by AGENTS.md, MEMORY.md, README.md, docs/README.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/research-plan.md, docs/harness-architecture.md, docs/version-control.md, learning/mental-model.md, learning/stage-journal.md
 -->
 
 # Tokenizer project plan
@@ -44,7 +44,7 @@ Evaluate every proposed stage against the audit rubric. Keep, split, merge, reor
 
 ### Phase 4 — Stack and harness decision
 
-Select the language, CLI shape, repository layout, test runner, and fixture strategy. Compare a small number of realistic options based on learning value, byte handling, testability, portability, and CodeCrafters compatibility.
+Completed on 2026-10-22. Go is the implementation language. The learner application follows the CodeCrafters-style `app/main.go` and `your_program.sh` interface. A separate Go module under `challenge-cli/` authors declarative stage manifests and runs black-box process tests; it does not import the application or manage Git.
 
 ### Phase 5 — Incremental build
 

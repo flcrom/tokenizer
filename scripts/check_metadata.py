@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 IGNORED_DIRECTORIES = {
     ".git",
+    ".local",
     ".venv",
     "build",
     "coverage",

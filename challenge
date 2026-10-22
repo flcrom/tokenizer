@@ -1,0 +1,13 @@
+#!/bin/sh
+# @file challenge
+# @description Runs the isolated local challenge CLI from the repository root.
+# @depends_on challenge-cli/go.mod, challenge-cli/cmd/challenge/main.go
+# @depended_on_by none
+
+set -eu
+
+project_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$project_root/challenge-cli"
+
+TOKENIZER_PROJECT_ROOT="$project_root" exec go run ./cmd/challenge "$@"
+

@@ -1,7 +1,7 @@
 <!--
 @file README.md
 @description Introduces the tokenizer learning project, its present boundary, navigation, and immediate next step.
-@depends_on MEMORY.md, plan.md, docs/README.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/source-orientation.md, docs/tokenizer-foundations.md, docs/research-plan.md, docs/version-control.md, learning/mental-model.md
+@depends_on MEMORY.md, plan.md, docs/README.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/source-orientation.md, docs/tokenizer-foundations.md, docs/research-plan.md, docs/harness-architecture.md, docs/version-control.md, challenge-cli/README.md, learning/mental-model.md
 @depended_on_by none
 -->
 
@@ -13,9 +13,9 @@ The learner does not need to type every line. The non-negotiable requirement is 
 
 ## Current boundary
 
-The repository has completed **Phase 0: workspace foundation** and the first **Phase 1: source orientation** pass. No implementation language or tokenizer code has been selected. The CEO-provided document is preserved as source material and has been described at a high level, but its individual stage boundaries have not been approved.
+The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. The CEO-provided document remains source material whose individual stage boundaries still require review.
 
-The next step is **Phase 2: tokenizer foundations**. We will build a usable mental model of tokenization, bytes, token IDs, vocabularies, training, encoding, decoding, and major tokenizer families before auditing all 16 stages.
+The next step is to review the harness code and then approve the first stage contract. No tokenizer behavior has been implemented yet.
 
 ## Where to start
 
@@ -26,7 +26,9 @@ The next step is **Phase 2: tokenizer foundations**. We will build a usable ment
 - [docs/stage-workflow.md](docs/stage-workflow.md) defines how every later challenge stage moves from prediction to engineering evidence to learning sign-off.
 - [docs/challenge-audit.md](docs/challenge-audit.md) is the future stage-by-stage review surface.
 - [docs/research-plan.md](docs/research-plan.md) defines the questions the tokenizer foundations phase must answer.
+- [docs/harness-architecture.md](docs/harness-architecture.md) defines the Go starter, isolated challenge CLI, manifest contract, and verification boundary.
 - [docs/version-control.md](docs/version-control.md) defines the `main` and `stages` branch roles and stage-commit convention.
+- [challenge-cli/README.md](challenge-cli/README.md) documents the local tester commands and limitations.
 - [learning/mental-model.md](learning/mental-model.md) is the learner's place for drawings and evolving models.
 - [MEMORY.md](MEMORY.md) is the compact recovery point for another AI model.
 
@@ -34,5 +36,13 @@ Before completing a file-changing task, run:
 
 ```bash
 python3 scripts/check_metadata.py
+```
+
+The starter and local challenge interface are:
+
+```bash
+./your_program.sh
+./challenge list
+./challenge help
 ```
 

@@ -2,7 +2,7 @@
 @file docs/version-control.md
 @description Defines the Git branch roles and cumulative CodeCrafters-style commit policy for verified stages.
 @depends_on plan.md
-@depended_on_by README.md, docs/README.md
+@depended_on_by README.md, docs/README.md, docs/harness-architecture.md
 -->
 
 # Version-control strategy
@@ -28,9 +28,9 @@ stage-01-encode-ascii
 stage-02-encode-utf8
 ```
 
-The tag message records the approved stage name and verification evidence. A stage is not committed or tagged as passed merely because code exists; its engineering status must be `verified`. Learning sign-off remains separately recorded and may happen after the commit.
+The tag message records the approved stage name and verification evidence. A stage is not committed or tagged as passed merely because code exists or tests are green. Its engineering status must be `verified`, its learning status must be `signed_off`, and the learner must accept it as satisfactory.
 
 ## Relationship between branches
 
-Design and research can advance on `main` without pretending that implementation stages have passed. Stage implementation happens on `stages`. We will decide explicitly when an approved stage history or final implementation should be merged or represented on `main`; no automatic merge policy is assumed yet.
+`main` remains the living workspace for design, test authoring, implementation work, and review. `stages` is a curated checkpoint history: the scaffold is shared by both branches, then each accepted stage is represented by one cumulative CodeCrafters-style commit. The local challenge CLI never performs these Git operations.
 
