@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "stage": 2,
+  "slug": "utf8-base-round-trip",
+  "title": "Encode and decode UTF-8 base tokens",
+  "cases": [
+    {
+      "name": "encodes multibyte Latin text",
+      "args": ["encode", "--text", "café"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [99, 97, 102, 195, 169]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "encodes a four-byte emoji",
+      "args": ["encode", "--text", "🙂"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [240, 159, 153, 130]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "preserves mixed UTF-8 byte order",
+      "args": ["encode", "--text", "A🙂é"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [65, 240, 159, 153, 130, 195, 169]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "does not normalize precomposed text",
+      "args": ["encode", "--text", "é"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [195, 169]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "does not normalize decomposed text",
+      "args": ["encode", "--text", "é"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [101, 204, 129]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "decodes UTF-8 bytes",
+      "args": ["decode", "--ids", "[99,97,102,195,169]"],
+      "expect": {
+        "stdout": {"mode": "exact_bytes", "base64": "Y2Fmw6k="},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "decodes an embedded newline without adding one",
+      "args": ["decode", "--ids", "[65,10,66]"],
+      "expect": {
+        "stdout": {"mode": "exact_bytes", "base64": "QQpC"},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "decodes arbitrary base bytes exactly",
+      "args": ["decode", "--ids", "[0,10,255]"],
+      "expect": {
+        "stdout": {"mode": "exact_bytes", "base64": "AAr/"},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "decodes an empty array to zero bytes",
+      "args": ["decode", "--ids", "[]"],
+      "expect": {
+        "stdout": {"mode": "exact_bytes", "base64": ""},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    }
+  ]
+}

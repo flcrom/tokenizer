@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Parses the tokenizer command line and writes Stage 1 ASCII byte IDs as JSON.
+ * @description Parses encode and decode commands and round-trips UTF-8 through base byte token IDs.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -25,15 +25,26 @@ func main() {
 }
 
 func run(arguments []string, stdout io.Writer) error {
-	if len(arguments) == 0 || arguments[0] != "encode" {
-		return errors.New("usage: tokenizer encode --text TEXT")
+	if len(arguments) == 0 {
+		return errors.New("usage: tokenizer <encode|decode>")
 	}
 
+	switch arguments[0] {
+	case "encode":
+		return runEncode(arguments[1:], stdout)
+	case "decode":
+		return runDecode(arguments[1:], stdout)
+	default:
+		return errors.New("usage: tokenizer <encode|decode>")
+	}
+}
+
+func runEncode(arguments []string, stdout io.Writer) error {
 	flags := flag.NewFlagSet("encode", flag.ContinueOnError)
 	// flags for the new "encode" option belong to flags variable
 	flags.SetOutput(io.Discard)
-	text := flags.String("text", "", "ASCII text to encode")
-	if err := flags.Parse(arguments[1:]); err != nil {
+	text := flags.String("text", "", "UTF-8 text to encode")
+	if err := flags.Parse(arguments); err != nil {
 		return errors.New("usage: tokenizer encode --text TEXT")
 	}
 	if flags.NArg() != 0 {
@@ -43,6 +54,26 @@ func run(arguments []string, stdout io.Writer) error {
 	return json.NewEncoder(stdout).Encode(encodeBytes(*text))
 }
 
+func runDecode(arguments []string, stdout io.Writer) error {
+	flags := flag.NewFlagSet("decode", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	encodedIDs := flags.String("ids", "", "JSON array of base token IDs")
+	if err := flags.Parse(arguments); err != nil {
+		return errors.New("usage: tokenizer decode --ids JSON")
+	}
+	if flags.NArg() != 0 {
+		return errors.New("usage: tokenizer decode --ids JSON")
+	}
+
+	var ids []int
+	if err := json.Unmarshal([]byte(*encodedIDs), &ids); err != nil {
+		return fmt.Errorf("parse --ids: %w", err)
+	}
+
+	_, err := stdout.Write(decodeBaseIDs(ids))
+	return err
+}
+
 func encodeBytes(text string) []int {
 	bytes := []byte(text)
 	ids := make([]int, len(bytes))
@@ -50,4 +81,12 @@ func encodeBytes(text string) []int {
 		ids[index] = int(value)
 	}
 	return ids
+}
+
+func decodeBaseIDs(ids []int) []byte {
+	decoded := make([]byte, len(ids))
+	for index, id := range ids {
+		decoded[index] = byte(id)
+	}
+	return decoded
 }

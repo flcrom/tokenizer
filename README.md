@@ -13,9 +13,9 @@ The learner does not need to type every line. The non-negotiable requirement is 
 
 ## Current boundary
 
-The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Stage 1 ASCII encoding is engineering-verified, learning-signed-off, and accepted; the CEO-provided document remains source material whose later stage boundaries still require review.
+The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Stage 1 is accepted and checkpointed. Revised Stage 2 combines UTF-8 encoding with base-token decoding and is engineering-verified, learning-signed-off, and accepted.
 
-The next step is to audit the proposed Stage 2 UTF-8 boundary before implementing it.
+The next step is to audit and frame revised Stage 3, corresponding to the source challenge's adjacent-pair counting stage.
 
 ## Where to start
 

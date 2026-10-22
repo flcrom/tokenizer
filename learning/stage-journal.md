@@ -74,6 +74,73 @@ AI clarification: this correctly identifies the input boundary, argument parsing
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 2 — Encode and decode UTF-8 base tokens
+
+### Contract
+
+- Stage name: Encode and decode UTF-8 base tokens
+- New observable behavior: `encode --text` is verified for arbitrary valid UTF-8 without normalization, and `decode --ids` converts JSON base-token IDs into exact raw bytes without adding a newline.
+- Main concept: UTF-8 text is a byte sequence, and base token IDs round-trip those bytes without the tokenizer interpreting characters.
+- Explicit non-goals: learned token IDs above 255, merge rules, UTF-8 validation, normalization, and the final invalid-input contract.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My prediction before implementation
+
+- Encoding lengths predicted by the learner:
+  - `"café"` → 5 IDs
+  - `"🙂"` → 4 IDs
+  - `"A🙂é"` → 7 IDs
+- Initial decoding outputs, preserved as supplied by the learner:
+  - `[99,97,102,195,169]` → `[63, 61, 66, c3, a9]`
+  - `[65,10,66]` → `[A, , B]`
+  - `[]` → `[]`
+- Correction discussed before implementation: `63 61 66 C3 A9` is the hexadecimal representation of the output bytes, not a printed array; the terminal renders those valid bytes as `café`. Byte 10 creates a real newline between `A` and `B`. Decoding `[]` writes zero bytes rather than the characters `[]` or a blank line.
+- Expected intermediate states: JSON IDs → `[]int` → `[]byte` → raw stdout; no byte-to-Unicode conversion occurs inside the tokenizer.
+- Why: each base token ID names one byte directly, so lossless decoding only reconstructs and writes those bytes.
+
+### What AI implemented
+
+- Important files and symbols: `app/main.go` now dispatches through `runEncode` and `runDecode`; `decodeBaseIDs` performs the base-ID-to-byte conversion. `app/main_test.go` covers encoding, decoding, and pure round trips. `challenge-cli/stages/02-utf8-base-round-trip.json` defines five encoding and four byte-exact decoding cases.
+- Execution path in order: `main` passes process arguments and stdout to `run`; `run` dispatches `decode`; `runDecode` parses `--ids`, `json.Unmarshal` builds a `[]int`, `decodeBaseIDs` converts each ID to a byte, and `stdout.Write` emits the resulting bytes unchanged.
+- Important invariants: one base ID produces exactly one byte in the same position; decoding does not interpret or validate UTF-8; no output newline is added; an empty ID array writes zero bytes; current-stage inputs are valid base IDs from 0 through 255.
+- Language or library mechanics I had to learn: separate `flag.FlagSet` values keep command options independent; `json.Unmarshal` parses JSON into an existing Go value; `byte(id)` converts a valid base ID to one byte; `io.Writer.Write` writes raw bytes rather than formatting them as text.
+
+### Evidence
+
+- Command or check: before decoding implementation, `./challenge test --stage 2 --debug`.
+- Observed result: all 5 UTF-8 encoding cases passed through the unchanged Stage 1 conversion, while all 4 decoding cases failed because only `encode` was recognized.
+- Command or check: after implementation, `./challenge test --stage 2 --previous`.
+- Observed result: all 16 cumulative black-box cases passed: 7 from Stage 1 and 9 from revised Stage 2.
+- Command or check: root `go test ./...` and `go vet ./...`; challenge module `go test -race ./...` and `go vet ./...`.
+- Observed result: all checks exited 0 with the project-local Go caches.
+- What this proves: Unicode text is encoded without normalization; base IDs reconstruct exact bytes, including `00 0A FF`; decoding adds no newline; empty input writes zero bytes; existing ASCII behavior remains active; pure UTF-8 fixtures round-trip.
+- What this does not prove: learned IDs above 255, model-based decoding, the final invalid-input contract, or learner understanding.
+
+### My explanation after reading the code
+
+Learner explanation, preserved as given:
+
+> stdout.Write takes byte array in input and thats why we are using it. not 100% sure but we need the actual string to be outputted thats is why.
+
+AI clarification accepted during review: `stdout.Write` is used because the tokenizer's output contract is exact bytes, not because Go must construct a string. A terminal may render valid UTF-8 bytes as text, but invalid or invisible bytes must still be emitted unchanged.
+
+### Adversarial case
+
+- Input: `[0,10,255]`
+- Expected behavior: write exactly the bytes `00 0A FF`.
+- Why this case is useful: it contains a null byte, a newline, and a byte that is not valid UTF-8 on its own. It catches implementations that treat decoded data as Unicode text, stop at a null byte, trim it, or append a formatting newline.
+- Observed behavior, if run: the black-box harness compared raw bytes and passed.
+
+### Questions and sign-off
+
+- Remaining questions: none for revised Stage 2.
+- AI feedback on gaps: the learner identified the raw-byte output API correctly and accepted the distinction between writing bytes and constructing a string.
+- Learner acceptance: accepted by asking to move to the next stage after the code and adversarial-case review.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
 ## Stage template
 
 ### Contract

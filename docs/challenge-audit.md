@@ -58,4 +58,23 @@ Populate this only after the high-level source orientation.
 | Original stage | Capability | Main concept | Load | Decision | Rationale / replacement |
 | --- | --- | --- | --- | --- | --- |
 | 1 — Encode ASCII text | `encode --text` emits one integer ID per ASCII byte | A token ID can name a byte | Small core conversion plus first end-to-end CLI integration | `keep` — accepted | The conversion is only a few lines, but the stage establishes the command-line input, flag parsing, transformation, JSON output, launcher, and black-box contract together. The learner found that sufficient for a first stage. ASCII keeps the byte/character distinction out of scope until Stage 2. |
+| 2 — Encode UTF-8 bytes | Extend `encode --text` to arbitrary valid UTF-8 without normalization | A code point may occupy multiple bytes | Conceptually meaningful; often no implementation change in byte-oriented languages | `merge` with original Stage 3 | In Go, the accepted Stage 1 implementation already passes the proposed UTF-8 cases because `[]byte(text)` exposes the UTF-8 bytes. Rust and Ruby have similarly direct byte APIs. Other popular languages need a small explicit encoding change, but the behavior remains one standard-library conversion. Merge with decoding to form a substantive byte-level round-trip stage. |
+| 3 — Decode base token IDs | `decode --ids` writes the exact represented bytes with no added newline | Lossless decoding reconstructs bytes | Moderate: a new command, JSON input, byte reconstruction, and a raw-byte output boundary | `merge` with original Stage 2 | Revised Stage 2 is **Encode and decode UTF-8 base tokens**. It combines the important bytes-versus-characters lesson with observable reversibility and enough new implementation work across languages. |
+
+## Cross-language evidence for the Stage 2 decision
+
+The important comparison is not whether a language *can* encode UTF-8; all of these can. It is whether a natural byte-oriented Stage 1 implementation already handles UTF-8, leaving no implementation work for the original Stage 2.
+
+| Language | Plausible ASCII-only Stage 1 route | Correct UTF-8 byte route | Likely Stage 2 change |
+| --- | --- | --- | --- |
+| Go | Convert the string to `[]byte`, as this project does | The same `[]byte(text)` conversion | None. Go strings store bytes, and our Stage 1 already uses the correct representation. |
+| Rust | Iterate `str::bytes()` or use `as_bytes()` | The same byte iterator or slice | None when Stage 1 is byte-oriented; Rust strings are already UTF-8. |
+| Ruby | Call `String#bytes` | The same method when the input string is UTF-8 | Usually none; Ruby strings expose their underlying byte sequence directly. |
+| Python | Iterate characters and call `ord`, which works for ASCII | Encode the `str` with UTF-8, then iterate the resulting `bytes` integers | A small but real representation change: `text` becomes `text.encode("utf-8")`. |
+| JavaScript / Node.js | Read character or UTF-16 code-unit values, which happen to match ASCII | Create a UTF-8 `Buffer` or use `TextEncoder`, then read its bytes | A small but real API and representation change. Direct string iteration is not UTF-8-byte iteration. |
+| Java | Read `char` values, which happen to match ASCII | Call `getBytes(StandardCharsets.UTF_8)`, then convert signed bytes to IDs `0–255` | More visible plumbing because Java `byte` is signed and must be widened as unsigned data. |
+
+The Go result was also checked directly before this decision: `café`, `🙂`, and `A🙂é` produced 5, 4, and 7 IDs respectively without a code change. Precomposed `é` produced `[195,169]`, while decomposed `e` plus U+0301 produced `[101,204,129]`; the implementation does not normalize them.
+
+Official references: [Go strings, bytes, and runes](https://go.dev/blog/strings), [Rust `str::bytes`](https://doc.rust-lang.org/std/primitive.str.html#method.bytes), [Ruby `String`](https://docs.ruby-lang.org/en/master/String.html), [Python text and binary sequence types](https://docs.python.org/3/library/stdtypes.html), [Node.js `Buffer.from`](https://nodejs.org/docs/latest/api/buffer.html#static-method-bufferfromstring-encoding), [Java `String.getBytes`](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html#getBytes(java.nio.charset.Charset)), and the [Java primitive-type ranges](https://docs.oracle.com/javase/specs/jls/se21/html/jls-4.html#jls-4.2.1).
 
