@@ -64,6 +64,7 @@ Populate this only after the high-level source orientation.
 | 5 — Replace one pair | `merge --ids --pair --new-id` replaces a caller-supplied pair | Replacement consumes non-overlapping matches | Small and isolated, but the public command is artificial and makes no BPE decision | `remove` as a stage | Do not expose the source's caller-directed `merge` command. Replacement remains a pure, directly unit-tested helper used by training, but does not need its own learner-facing stage. |
 | 6 — Train the first merge | Select a unique most-frequent pair, assign ID 256, replace it, and emit a one-rule result | Frequency learns a reusable rule and immediately transforms the training IDs | Several linked operations, but Stage 3 already supplies counting | `keep and revise` as revised Stage 4 | Rename the temporary `merge-top` command to `train --text --merges 1`. Return the model fields together with the post-merge IDs so selection and replacement remain observable through the real training interface. |
 | 7 — Resolve tied frequencies | Extend winner selection when multiple pairs share the highest frequency | Training needs a deterministic tie rule | Focused extension to selection semantics | `keep` as revised Stage 5 | Stage 5 sorts by frequency descending, left ID ascending, then right ID ascending. Focused cases separately prove left-ID priority and right-ID priority while retaining a unique-winner regression. |
+| 8 — Learn successive merges | Permit positive `--merges N`, recount after every replacement, and let later rules reference learned IDs | Each merge changes the next frequency table | Substantial but cohesive loop over the established primitives | `keep` as revised Stage 6 | Reuse deterministic selection and replacement in a loop. Compare one-, two-, and three-merge runs on the same text so stale frequency tables and incorrect learned IDs are observable. |
 
 ## Revised Stage 4 contract
 
@@ -74,6 +75,10 @@ This removes the source's caller-directed Stage 5 entirely and implements its St
 ## Revised Stage 5 contract
 
 The command and output shape remain `train --text TEXT --merges 1`. When several candidates share the highest frequency, selection orders all candidates by frequency descending, left token ID ascending, and right token ID ascending, then chooses the first pair. The winning pair must still occur at least twice. This makes selection independent of Go map iteration order and gives later repeated training a reusable deterministic selector. More than one merge and safe early stopping remain out of scope.
+
+## Revised Stage 6 contract
+
+`train --text TEXT --merges N` accepts a positive merge count and attempts exactly that many iterations on fixtures with enough repeated pairs. Each iteration counts the current IDs, selects the deterministic winner, assigns ID `256 + merge index`, performs non-overlapping replacement, appends the ordered rule, and then recounts the transformed sequence. The enhanced project result continues to include `ids` alongside the source model fields. Zero merges, empty or one-byte input, and stopping before the requested budget are deliberately deferred to the source's Stage 9.
 
 ## Cross-language evidence for the Stage 2 decision
 

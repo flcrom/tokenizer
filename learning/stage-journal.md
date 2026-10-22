@@ -331,6 +331,61 @@ Learner proposal, preserved from the stage discussion:
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 6 — Learn successive merges
+
+### Contract
+
+- Stage name: Learn successive merges
+- New observable behavior: `train --text TEXT --merges N` accepts a positive `N` and learns that many ordered rules when the input has enough repeated pairs.
+- Main concept: every replacement changes adjacency, so training must recount the transformed ID sequence before choosing the next rule.
+- Explicit non-goals: zero merges, empty or one-byte inputs, stopping before an oversized budget, persistence, and model-based encoding or decoding.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My prediction before implementation
+
+Learner proposal, preserved from the stage discussion:
+
+> counter which counts from 1 to N, for each merge, we iterate the complete ids and merge creating a new list of ids, then we rescan the pairs and make a new sorted pair list and then do this merge thing again until the count.
+
+- Expected intermediate states: current IDs → current pair counts and ordering → selected pair → new IDs → fresh pair counts for the next iteration.
+- AI clarification before implementation: the overall approach is correct. The previously sorted candidate list cannot be reused after replacement because it describes adjacencies that may no longer exist.
+
+### What AI implemented
+
+- Important files and symbols: `trainMerges` owns the loop and accumulated rule list; `nextMergeStep` performs one select-and-replace iteration for an existing ID sequence and assigned ID; `trainFirstMerge` remains as a Stage 4-compatible wrapper. `challenge-cli/stages/06-learn-successive-merges.json` compares one-, two-, and three-merge runs.
+- Execution path in order: `runTrain` parses a positive `--merges`; `trainMerges` starts from byte IDs; merge index 0 calls `nextMergeStep` with ID 256; the returned IDs become the next iteration's input; subsequent steps use IDs 257, 258, and so on; the final model contains rules in learning order plus the final transformed IDs.
+- Important invariants: the selected pair always comes from the current sequence; counts are rebuilt on every iteration; rule `i` creates token `256 + i`; a rule may reference only base IDs or earlier learned IDs; replacement remains left-to-right and non-overlapping.
+- Complexity at this stage: for each requested merge, pair counting and replacement scan the current sequence and selection sorts its distinct pairs. For the challenge's small educational inputs, this direct implementation favors clarity over incremental frequency-maintenance complexity.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 6 --debug`.
+- Observed result: the one-merge case passed through Stage 5 behavior, while the two- and three-merge cases failed because the CLI accepted only `--merges 1`.
+- Command or check: after implementation, `./challenge test --stage 6 --previous`.
+- Observed result: all 32 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, 6 from Stage 3, 4 from Stage 4, 3 from Stage 5, and 3 from Stage 6.
+- What this proves: successive rules use freshly counted sequences, learned IDs are assigned in order, and later rules can reference earlier learned IDs.
+- What this does not prove: safe stopping when the requested budget is too large, zero-merge behavior, persistence, or learner understanding after reading the implementation.
+
+### Trace and adversarial case
+
+For `train --text 'banana banana' --merges 3`:
+
+1. Learn `[97,110]` as ID 256: `[98,256,256,97,32,98,256,256,97]`.
+2. Recount and learn `[98,256]` as ID 257: `[257,256,97,32,257,256,97]`.
+3. Recount and learn `[256,97]` as ID 258: `[257,258,32,257,258]`.
+
+The one-, two-, and three-merge fixtures form the adversarial set: an implementation that reuses the original frequency table or always assigns ID 256 cannot satisfy all three.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 6.
+- AI feedback on gaps: the learner's proposed control flow is the standard clear implementation. The learner reviewed the loop, intermediate sequences, learned-ID assignment, and hierarchical third rule and found them satisfactory.
+- Learner acceptance: accepted after reviewing the implementation and complete three-merge trace.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
 ## Stage template
 
 ### Contract

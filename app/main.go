@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Dispatches byte encoding, base decoding, pair counting, and deterministic first-merge tokenizer training.
+ * @description Dispatches byte encoding, base decoding, pair counting, and deterministic successive-merge tokenizer training.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -104,13 +104,13 @@ func runTrain(arguments []string, stdout io.Writer) error {
 	text := flags.String("text", "", "UTF-8 training text")
 	mergeLimit := flags.Int("merges", 0, "maximum number of merge rules to learn")
 	if err := flags.Parse(arguments); err != nil {
-		return errors.New("usage: tokenizer train --text TEXT --merges 1")
+		return errors.New("usage: tokenizer train --text TEXT --merges N")
 	}
-	if flags.NArg() != 0 || *mergeLimit != 1 {
-		return errors.New("usage: tokenizer train --text TEXT --merges 1")
+	if flags.NArg() != 0 || *mergeLimit < 1 {
+		return errors.New("usage: tokenizer train --text TEXT --merges N")
 	}
 
-	model, err := trainFirstMerge(*text)
+	model, err := trainMerges(*text, *mergeLimit)
 	if err != nil {
 		return err
 	}
@@ -194,28 +194,39 @@ type mergeStep struct {
 }
 
 func trainFirstMerge(text string) (tokenizerModel, error) {
-	step, err := firstMergeStep(text)
-	if err != nil {
-		return tokenizerModel{}, err
+	return trainMerges(text, 1)
+}
+
+func firstMergeStep(text string) (mergeStep, error) {
+	return nextMergeStep(encodeBytes(text), baseVocabSize)
+}
+
+func trainMerges(text string, mergeLimit int) (tokenizerModel, error) {
+	ids := encodeBytes(text)
+	merges := make([][]int, 0, mergeLimit)
+	for mergeIndex := 0; mergeIndex < mergeLimit; mergeIndex++ {
+		step, err := nextMergeStep(ids, baseVocabSize+mergeIndex)
+		if err != nil {
+			return tokenizerModel{}, err
+		}
+		merges = append(merges, []int{step.pair.left, step.pair.right})
+		ids = step.ids
 	}
 
 	return tokenizerModel{
 		Version:       1,
-		Merges:        [][]int{{step.pair.left, step.pair.right}},
+		Merges:        merges,
 		BaseVocabSize: baseVocabSize,
-		IDs:           step.ids,
+		IDs:           ids,
 	}, nil
 }
 
-func firstMergeStep(text string) (mergeStep, error) {
-	ids := encodeBytes(text)
+func nextMergeStep(ids []int, newID int) (mergeStep, error) {
 	pair, count, err := selectTopPair(pairFrequencies(ids))
 	if err != nil {
 		return mergeStep{}, err
 	}
 
-	const mergeIndex = 0
-	newID := baseVocabSize + mergeIndex
 	return mergeStep{
 		pair:  pair,
 		count: count,
