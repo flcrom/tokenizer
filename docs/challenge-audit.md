@@ -72,6 +72,7 @@ Populate this only after the high-level source orientation.
 | 13 — Respect learned merge priority | Apply multiple base-ID rules by saved rank rather than new-input frequency | Training decides priority; inference follows it | Focused loop extension with an adversarial ordering case | `merge` with original Stages 12 and 14 as revised Stage 10 | The combined stage contrasts zero, one, and multiple rules. Reversing two rules must change output. |
 | 14 — Encode hierarchical tokens | Permit later rules to contain IDs created by earlier rules | Learned tokens compose into larger learned tokens | Conceptually important but already supported by the established ordered replacement loop | `merge` into revised Stage 10 | Training already creates hierarchical rules and inference already refreshes IDs after each saved rule. Removing the artificial base-ID-only guard plus focused multi-level cases completes encoding without a new algorithm. |
 | 15 — Decode learned tokens | Add `--model` to `decode` and expand base and learned IDs into exact bytes | A learned token's meaning is a recursively composed byte sequence | Cohesive inverse-model operation with an important raw-byte boundary | `keep` as revised Stage 11 | Build token expansions in merge order, concatenate requested expansions, then write raw bytes once. Invalid UTF-8 token fragments make this independently valuable from encoding. |
+| 16 — Reject invalid inputs cleanly | Validate CLI data, files, model structure, model graph, and token existence; emit four stable error codes | External data must be classified and validated before producing output | Large cross-cutting boundary touching every command plus a nontrivial token-graph validator | `keep` as revised Stage 12 — accepted | The verified production diff was 177 additions and 47 deletions. After reviewing that implementation separately from the larger test and documentation diff, the learner kept the stage whole as one coherent final validation boundary. |
 
 ## Revised Stage 4 contract
 
@@ -106,6 +107,17 @@ The command and output shape remain `train --text TEXT --merges 1`. When several
 ## Revised Stage 11 contract
 
 `decode --model PATH --ids JSON` builds a byte expansion for every token defined by the model. Base IDs expand to their single byte. For merge entry `i = [left,right]`, learned ID `base_vocab_size + i` expands to the already-built left bytes followed by the right bytes. Decoding concatenates each requested token's expansion and writes the resulting bytes without per-token UTF-8 conversion or a trailing newline. Cases mix base and learned IDs, traverse multiple hierarchical levels, preserve unseen multilingual base bytes, and prove that an individual learned-token expansion may be invalid UTF-8 while the complete byte stream remains exact. Final error classification and complete model validation remain source Stage 16.
+
+## Revised Stage 12 contract
+
+Every failure exits with status 1, writes no stdout, and writes exactly one JSON object to stderr containing one of four codes:
+
+- `invalid_input`: unknown commands or flags, missing required flags, malformed IDs JSON, null/non-integer/negative IDs, negative or non-integer merge budgets, and conflicting or missing corpus sources;
+- `io_error`: unreadable model or corpus paths, unwritable output paths, or failed output writes;
+- `invalid_model`: malformed model JSON; missing or wrongly typed required fields; unsupported version or base vocabulary size; malformed merge pairs; negative, self, or future operands; and duplicate pair rules;
+- `unknown_token`: a nonnegative decode ID outside the vocabulary defined by the validated model, or above 255 when no model is supplied.
+
+The model validator requires `version: 1`, `base_vocab_size: 256`, and an array of two-integer merge entries. Rule `i` creates ID `256 + i`, so each operand must be nonnegative and smaller than that ID. Pair rules must be unique. Unknown object fields are ignored. All command and model validation must finish before success bytes are emitted; valid operations continue to exit 0. After reviewing its verified diff, the learner accepted this as one final stage.
 
 ## Cross-language evidence for the Stage 2 decision
 

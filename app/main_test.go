@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies learned-model encoding and decoding, model loading, pair operations, deterministic training, and raw byte preservation.
+ * @description Verifies model validation, error classification, learned-model inference, pair operations, training, and raw byte preservation.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -51,7 +51,11 @@ func TestDecodeBaseIDs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := decodeBaseIDs(test.ids); !bytes.Equal(got, test.want) {
+			got, err := decodeBaseIDs(test.ids)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, test.want) {
 				t.Fatalf("decodeBaseIDs(%v) = %v, want %v", test.ids, got, test.want)
 			}
 		})
@@ -61,7 +65,10 @@ func TestDecodeBaseIDs(t *testing.T) {
 func TestBaseTokenRoundTrip(t *testing.T) {
 	fixtures := []string{"", "hello", "café", "🙂", "é", "line one\nline two"}
 	for _, fixture := range fixtures {
-		decoded := decodeBaseIDs(encodeBytes(fixture))
+		decoded, err := decodeBaseIDs(encodeBytes(fixture))
+		if err != nil {
+			t.Fatal(err)
+		}
 		if !bytes.Equal(decoded, []byte(fixture)) {
 			t.Fatalf("round trip for %q produced %v", fixture, decoded)
 		}
@@ -415,5 +422,54 @@ func TestDecodeWithModelPreservesRawBytes(t *testing.T) {
 	want := []byte{169, 195}
 	if !bytes.Equal(got, want) {
 		t.Fatalf("decodeWithModel([256]) = %v, want %v", got, want)
+	}
+}
+
+func TestParseModelRejectsInvalidTokenGraphs(t *testing.T) {
+	tests := []struct {
+		name  string
+		model string
+	}{
+		{name: "malformed JSON", model: "{not json"},
+		{name: "missing field", model: `{"version":1,"base_vocab_size":256}`},
+		{name: "wrong version", model: `{"version":2,"base_vocab_size":256,"merges":[]}`},
+		{name: "wrong base size", model: `{"version":1,"base_vocab_size":128,"merges":[]}`},
+		{name: "wrong field type", model: `{"version":"1","base_vocab_size":256,"merges":[]}`},
+		{name: "wrong merge width", model: `{"version":1,"base_vocab_size":256,"merges":[[97]]}`},
+		{name: "non-integer operand", model: `{"version":1,"base_vocab_size":256,"merges":[[97.5,98]]}`},
+		{name: "negative operand", model: `{"version":1,"base_vocab_size":256,"merges":[[-1,97]]}`},
+		{name: "self reference", model: `{"version":1,"base_vocab_size":256,"merges":[[256,97]]}`},
+		{name: "future reference", model: `{"version":1,"base_vocab_size":256,"merges":[[257,97],[97,98]]}`},
+		{name: "duplicate pair", model: `{"version":1,"base_vocab_size":256,"merges":[[97,98],[97,98]]}`},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := parseModel([]byte(test.model)); codeForError(err) != errInvalidModel {
+				t.Fatalf("parseModel() error = %v, code = %q; want %q", err, codeForError(err), errInvalidModel)
+			}
+		})
+	}
+}
+
+func TestParseModelAcceptsUnknownFields(t *testing.T) {
+	encoded := []byte(`{"version":1,"base_vocab_size":256,"merges":[],"note":"ignored"}`)
+	model, err := parseModel(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{}}
+	if !reflect.DeepEqual(model, want) {
+		t.Fatalf("parseModel() = %#v, want %#v", model, want)
+	}
+}
+
+func TestDecodeRejectsUnknownTokens(t *testing.T) {
+	if _, err := decodeBaseIDs([]int{256}); codeForError(err) != errUnknownToken {
+		t.Fatalf("decodeBaseIDs() error = %v, code = %q; want %q", err, codeForError(err), errUnknownToken)
+	}
+	model := tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{{97, 110}}}
+	if _, err := decodeWithModel([]int{257}, model); codeForError(err) != errUnknownToken {
+		t.Fatalf("decodeWithModel() error = %v, code = %q; want %q", err, codeForError(err), errUnknownToken)
 	}
 }

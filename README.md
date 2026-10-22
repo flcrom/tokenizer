@@ -13,9 +13,9 @@ The learner does not need to type every line. The non-negotiable requirement is 
 
 ## Current boundary
 
-The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Revised Stages 1–10 are accepted and checkpointed. Revised Stage 11 decodes base and learned token IDs through a saved model; it is engineering-verified and learner-accepted.
+The repository has completed the workspace, source-orientation, foundations, stack/harness decisions, and all twelve revised implementation stages. Revised Stage 12 keeps source Stage 16 intact: it validates every external boundary and emits one structured error contract. All revised stages are engineering-verified, learner-reviewed, accepted, and checkpointed.
 
-The next step is to checkpoint revised Stage 11, then understand and audit source Stage 16's final structured validation and error contract.
+The next step is integrated validation and final challenge documentation: demonstrate the complete tokenizer, measure its practical boundary, and turn the implemented journey into a standalone Markdown challenge document.
 
 ## Where to start
 
