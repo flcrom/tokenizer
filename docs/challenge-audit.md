@@ -71,6 +71,7 @@ Populate this only after the high-level source orientation.
 | 12 — Apply a learned pair | Encode new text with a model containing one learned pair | Inference reuses a training rule even when it occurs only once in new input | Focused reuse of established replacement semantics | `merge` with original Stages 13–14 as revised Stage 10 | Empty-model loading already establishes the inference boundary and replacement is already implemented. Keep explicit zero- and one-rule cases, then make the stage substantive with priority and hierarchical composition. |
 | 13 — Respect learned merge priority | Apply multiple base-ID rules by saved rank rather than new-input frequency | Training decides priority; inference follows it | Focused loop extension with an adversarial ordering case | `merge` with original Stages 12 and 14 as revised Stage 10 | The combined stage contrasts zero, one, and multiple rules. Reversing two rules must change output. |
 | 14 — Encode hierarchical tokens | Permit later rules to contain IDs created by earlier rules | Learned tokens compose into larger learned tokens | Conceptually important but already supported by the established ordered replacement loop | `merge` into revised Stage 10 | Training already creates hierarchical rules and inference already refreshes IDs after each saved rule. Removing the artificial base-ID-only guard plus focused multi-level cases completes encoding without a new algorithm. |
+| 15 — Decode learned tokens | Add `--model` to `decode` and expand base and learned IDs into exact bytes | A learned token's meaning is a recursively composed byte sequence | Cohesive inverse-model operation with an important raw-byte boundary | `keep` as revised Stage 11 | Build token expansions in merge order, concatenate requested expansions, then write raw bytes once. Invalid UTF-8 token fragments make this independently valuable from encoding. |
 
 ## Revised Stage 4 contract
 
@@ -101,6 +102,10 @@ The command and output shape remain `train --text TEXT --merges 1`. When several
 ## Revised Stage 10 contract
 
 `encode --model PATH --text TEXT` covers models with zero, one, multiple, or hierarchical learned rules. It starts from UTF-8 byte IDs and visits saved rules in array order. Rule index `i` creates ID `base_vocab_size + i`; every non-overlapping occurrence is replaced before the next rule sees the transformed array. Later rules may therefore consume IDs produced by earlier rules. A saved rule applies even if it occurs once, and new-input frequency never changes priority. Fixtures separately verify zero rules, one rule, ordered and reversed priority, non-overlap, model immutability, and two levels of learned-token composition.
+
+## Revised Stage 11 contract
+
+`decode --model PATH --ids JSON` builds a byte expansion for every token defined by the model. Base IDs expand to their single byte. For merge entry `i = [left,right]`, learned ID `base_vocab_size + i` expands to the already-built left bytes followed by the right bytes. Decoding concatenates each requested token's expansion and writes the resulting bytes without per-token UTF-8 conversion or a trailing newline. Cases mix base and learned IDs, traverse multiple hierarchical levels, preserve unseen multilingual base bytes, and prove that an individual learned-token expansion may be invalid UTF-8 while the complete byte stream remains exact. Final error classification and complete model validation remain source Stage 16.
 
 ## Cross-language evidence for the Stage 2 decision
 

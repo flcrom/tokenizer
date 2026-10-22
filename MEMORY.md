@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches base and hierarchical learned-rule encoding, model loading, pair diagnostics, deterministic training, and persistence. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base and hierarchical learned-rule encoding, model loading, deterministic training, stopping, and arbitrary corpus bytes. | Application entry point | — |
+| `app/main.go` | Dispatches learned-model encoding and decoding, model loading, pair diagnostics, deterministic training, and persistence. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests learned-model encoding and decoding, model loading, deterministic training, stopping, and raw byte preservation. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -80,12 +80,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; revised Stages 1–9 are accepted and checkpointed, and revised Stage 10 complete learned-model encoding is engineering-verified and learner-accepted.
-- Completed: accepted and checkpointed Stages 1–9; accepted zero-, one-, priority-, and hierarchical-rule inference; ready-to-run example models; focused unit tests; and 61 cumulative black-box executions.
-- Not completed: curated checkpoint for Stage 10, model-based decoding, or full model validation.
+- Phase: 5 in progress; revised Stages 1–10 are accepted and checkpointed, and revised Stage 11 learned-model decoding is engineering-verified and learner-accepted.
+- Completed: accepted and checkpointed Stages 1–10; accepted base and hierarchical learned-token decoding; exact invalid-UTF-8 fragment preservation; focused unit tests; and 67 cumulative black-box executions.
+- Not completed: curated checkpoint for Stage 11 or the final structured validation and error contract.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: checkpoint revised Stage 10, then implement source Stage 15 model-based decoding as revised Stage 11.
+- Next discussion: checkpoint revised Stage 11, then understand and audit source Stage 16's distinction between invalid input, invalid models, unknown tokens, and I/O failures.
 
 ## Durable decisions
 
@@ -160,3 +160,7 @@ Original Stage 11 becomes revised Stage 9. `encode --model PATH --text TEXT` rea
 ### 2026-10-22 — Merge complete learned-model encoding as revised Stage 10
 
 Original Stages 12–14 become revised Stage 10. Its cases explicitly distinguish zero, one, multiple, and hierarchical rules. Encoding starts from UTF-8 byte IDs and applies rules in saved order, assigning rule `i` learned ID `base_vocab_size + i`; every transformed array feeds the next rule, so later rules can consume earlier learned IDs. Training already created such models and the inference loop already had the required mechanics, making original Stage 14 only an artificial guard plus tests rather than an independent implementation stage.
+
+### 2026-10-22 — Build learned-token byte expansions for revised Stage 11
+
+Original Stage 15 becomes revised Stage 11. Decoding builds expansions forward in model order: each base ID maps to one byte, and learned ID `base_vocab_size + i` concatenates its rule operands' already-built expansions. Requested token expansions are concatenated before one raw-byte write. This is equivalent to replacing learned IDs from highest to lowest, but avoids repeatedly expanding the same token and correctly preserves fragments that are not independently valid UTF-8.
