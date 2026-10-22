@@ -211,6 +211,76 @@ AI clarification accepted during review: the `pairs` diagnostic uses numeric pai
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 4 — Train the first merge
+
+### Contract
+
+- Stage name: Train the first merge
+- New observable behavior: `train --text TEXT --merges 1` performs one BPE step and prints the version, selected merge-rule array, base vocabulary size, and post-replacement IDs.
+- Main concept: one BPE step selects by frequency but replaces left-to-right without overlap.
+- Explicit non-goals: tied winners, caller-supplied pairs or new IDs, more than one requested merge, stopping rules, persistence, and the final invalid-input contract.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My prediction before implementation
+
+- Learner-approved trace:
+
+  > ababab -> [97,98,97,98,97,98] -> [97,98,3], [98,97,2] -> replace [97,98] with 256 -> [256,256,256]
+
+- Complete expected output: `{"pair":[97,98],"count":3,"new_id":256,"ids":[256,256,256]}`.
+- Expected intermediate states: text → byte IDs → pair-frequency map → unique highest-frequency pair → non-overlapping replacement IDs.
+- Why: `(97,98)` occurs three times and wins over `(98,97)`, which occurs twice; each winning occurrence is disjoint in this input.
+
+Contract revision after implementation review: the learner requested only renaming the temporary `merge-top` interface to `train`, while keeping the inspectable post-replacement IDs and adding the model fields. For `train --text 'ababab' --merges 1`, the public output is `{"version":1,"merges":[[97,98]],"base_vocab_size":256,"ids":[256,256,256]}`. Original Stage 5 is removed entirely as a public stage; this revised Stage 4 is an improved implementation of original Stage 6. Original Stage 7 is retained next for tied frequencies.
+
+### What AI implemented
+
+- Important files and symbols: `app/main.go` adds `runTrain`, reusable `pairFrequencies`, `selectUniqueTopPair`, `replacePair`, `firstMergeStep`, and `trainFirstMerge`. `tokenizerModel` defines the public JSON artifact, while the unexported `mergeStep` preserves the detailed algorithm state for unit tests. `challenge-cli/stages/04-train-first-merge.json` defines four black-box cases.
+- Execution path in order: `run` dispatches `train`; `runTrain` parses user-supplied `--text` and `--merges`, requiring the latter to equal 1 in this stage; `trainFirstMerge` calls `firstMergeStep`; that function encodes bytes, counts pairs, selects the unique highest count, assigns ID `baseVocabSize + 0`, and calls `replacePair`; `replacePair` scans left-to-right and advances by two after a match or one otherwise; training returns both the selected ordered pair in `merges` and the transformed sequence in `ids`.
+- Important invariants: base IDs are always 0–255 and `base_vocab_size` therefore remains 256; learned merge index 0 receives ID 256; the ordered merge list is sufficient to derive later learned IDs; counting includes overlapping windows; replacement never reuses a consumed ID; this stage requires one unique winner with count at least two; unmatched IDs retain order.
+- Language or library mechanics I had to learn: `flag.Int` parses the user-supplied merge budget; JSON struct tags produce `version`, `merges`, `base_vocab_size`, and `ids`; an unexported struct keeps the pair count and assigned ID available to same-package tests; a loop can manage its own index increment so matches advance by two and non-matches by one.
+
+### Evidence
+
+- Command or check: before the temporary implementation, `./challenge test --stage 4 --debug`.
+- Observed result: all 4 cases failed because `merge-top` was not recognized.
+- Command or check: after revising the contract, `./challenge test --stage 4 --debug`.
+- Observed result: all 4 revised cases failed because `train` was not recognized and the usage still advertised `merge-top`.
+- Command or check: after clarifying that the public result must retain post-replacement IDs, `./challenge test --stage 4 --debug`.
+- Observed result: all 4 cases failed because the `train` result had the model fields but omitted `ids`.
+- Command or check: after implementing the revised interface, `./challenge test --stage 4 --previous`.
+- Observed result: all 26 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, 6 from Stage 3, and 4 from Stage 4.
+- Command or check: root `go test ./...` and `go vet ./...`; challenge module `go test -race ./...` and `go vet ./...`.
+- Observed result: all checks exited 0 with the project-local Go caches.
+- What this proves: one unique most-frequent pair is selected, assigned ID 256, and replaced left-to-right without overlap; the public command emits the declared model fields and transformed IDs; overlapping counts and replacement counts remain distinct; previous behavior remains active.
+- What this does not prove: deterministic tie-breaking, repeated merges, safe early stopping, saving and loading the model, encoding with a learned model, or learner understanding.
+
+### My explanation after reading the code
+
+Learner explanation, preserved as given:
+
+> only 2 replacements because as the ids are getting replaced, 2 of them are replaced at once by one new id and so out of the 4 unique pairs, only 2 remain that can be replaced.
+> we advance by 2 so that we dont count the ids twice that are already replaced
+
+AI clarification: the four counted windows are four overlapping occurrences of the same pair, not four unique pairs. Replacement consumes two input positions at a time, so five identical IDs contain only two disjoint matches. Advancing by two prevents either consumed position from participating in another replacement.
+
+### Adversarial case
+
+- Input: `train --text 'zzzzz' --merges 1`
+- Expected public behavior: `{"version":1,"merges":[[122,122]],"base_vocab_size":256,"ids":[256,256,122]}`. The focused unit test additionally expects the internal step to count 4 windows.
+- Why this case is useful: four overlapping counted windows produce only two non-overlapping replacements. It catches implementations that confuse frequency with replacement count or advance by one after consuming a match.
+- Observed behavior, if run: the black-box harness passed with the one-rule result including replacement IDs, and the unit test passed with count 4.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 4.
+- AI feedback on gaps: the learner correctly explained consumption and advancing by two; only the distinction between pair occurrences and unique pair values needed correction. After reviewing the revised command and result contract, the learner elected to move to tied-frequency selection.
+- Learner acceptance: accepted after reviewing the corrected `train --text TEXT --merges 1` implementation and inspectable result.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
 ## Stage template
 
 ### Contract

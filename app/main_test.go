@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies base-token round trips and adjacent-pair counting independently of the process harness.
+ * @description Verifies base-token round trips, pair counting, replacement, and first-merge training independently of the process harness.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -86,5 +86,68 @@ func TestCountAdjacentPairs(t *testing.T) {
 				t.Fatalf("countAdjacentPairs(%v) = %v, want %v", test.ids, got, test.want)
 			}
 		})
+	}
+}
+
+func TestReplacePair(t *testing.T) {
+	tests := []struct {
+		name  string
+		ids   []int
+		pair  tokenPair
+		newID int
+		want  []int
+	}{
+		{name: "overlap is consumed once", ids: []int{97, 97, 97}, pair: tokenPair{97, 97}, newID: 256, want: []int{256, 97}},
+		{name: "two disjoint matches", ids: []int{97, 97, 97, 97}, pair: tokenPair{97, 97}, newID: 256, want: []int{256, 256}},
+		{name: "preserves IDs between matches", ids: []int{97, 98, 99, 97, 98}, pair: tokenPair{97, 98}, newID: 256, want: []int{256, 99, 256}},
+		{name: "absent pair", ids: []int{1, 2, 3}, pair: tokenPair{8, 9}, newID: 256, want: []int{1, 2, 3}},
+		{name: "empty", ids: []int{}, pair: tokenPair{1, 2}, newID: 256, want: []int{}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := replacePair(test.ids, test.pair, test.newID); !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("replacePair(%v, %v, %d) = %v, want %v", test.ids, test.pair, test.newID, got, test.want)
+			}
+		})
+	}
+}
+
+func TestFirstMergeStep(t *testing.T) {
+	tests := []struct {
+		text string
+		want mergeStep
+	}{
+		{text: "ababab", want: mergeStep{pair: tokenPair{97, 98}, count: 3, newID: 256, ids: []int{256, 256, 256}}},
+		{text: "zzzzz", want: mergeStep{pair: tokenPair{122, 122}, count: 4, newID: 256, ids: []int{256, 256, 122}}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.text, func(t *testing.T) {
+			got, err := firstMergeStep(test.text)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("firstMergeStep(%q) = %#v, want %#v", test.text, got, test.want)
+			}
+		})
+	}
+}
+
+func TestTrainFirstMerge(t *testing.T) {
+	want := tokenizerModel{
+		Version:       1,
+		Merges:        [][]int{{97, 98}},
+		BaseVocabSize: 256,
+		IDs:           []int{256, 256, 256},
+	}
+
+	got, err := trainFirstMerge("ababab")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("trainFirstMerge(%q) = %#v, want %#v", "ababab", got, want)
 	}
 }

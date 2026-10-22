@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches byte encoding, base decoding, and adjacent-pair counting commands. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base-token round trips and deterministic adjacent-pair counting. | Application entry point | — |
+| `app/main.go` | Dispatches base-token operations, pair diagnostics, and first-merge tokenizer training with model fields and post-merge IDs. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base-token operations, pair counting, selection, non-overlapping replacement, and the first-merge model. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -76,12 +76,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; revised Stage 3 pair counting is engineering-verified, learning-signed-off, and accepted.
-- Completed: accepted and checkpointed Stages 1–2; Stage 3 counting implementation; 22 cumulative black-box cases; deterministic-order explanation; adversarial review; and learner acceptance.
-- Not completed: curated Stage 3 Git checkpoint or later tokenizer stages.
+- Phase: 5 in progress; redesigned Stage 4 first-merge training is engineering-verified and learner-accepted, and revised Stage 5 tied-frequency selection is next.
+- Completed: accepted and checkpointed Stages 1–3; accepted Stage 4 `train --text --merges 1` implementation; version, merge rule, base vocabulary size, and post-merge ID output; unique top-pair selection; non-overlapping replacement; unit tests; and 26 cumulative black-box cases.
+- Not completed: curated Stage 4 checkpoint, deterministic tied-frequency implementation, repeated training, or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: audit and frame revised Stage 4, corresponding to original Stage 5 single-pair replacement.
+- Next action: checkpoint accepted Stage 4, then implement revised Stage 5 by ordering candidates by frequency descending, left ID ascending, and right ID ascending.
 
 ## Durable decisions
 
@@ -124,3 +124,7 @@ Revised Stage 2 passed 16 cumulative black-box cases plus unit, race, vet, shell
 ### 2026-10-22 — Keep and accept pair counting as revised Stage 3
 
 Original Stage 4 remains independent as revised Stage 3 because it introduces an observable BPE primitive: overlapping adjacent windows, ordered compound map keys, frequency accumulation, and deterministic numeric reporting. The learner distinguished the diagnostic's left-then-right output order from later frequency-based winner selection and accepted the implementation after 22 cumulative cases passed.
+
+### 2026-10-22 — Use the final-shaped training interface for revised Stage 4
+
+Original Stage 5 is removed as a public challenge stage: caller-directed replacement is an implementation helper, not a useful tokenizer interface. Original Stage 6 becomes revised Stage 4. Its learner-facing command is renamed from the temporary `merge-top` to `train --text TEXT --merges 1`, while retaining an inspectable result: version, the one ordered merge rule, fixed 256-byte base vocabulary size, and post-replacement IDs. The merge count is a user-supplied training-iteration budget that this stage restricts to one. Original Stage 7 is retained next to extend winner selection to tied frequencies.

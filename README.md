@@ -13,9 +13,9 @@ The learner does not need to type every line. The non-negotiable requirement is 
 
 ## Current boundary
 
-The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Stages 1 and 2 are accepted and checkpointed. Revised Stage 3 counts overlapping adjacent token pairs and is engineering-verified, learning-signed-off, and accepted.
+The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Stages 1–3 are accepted and checkpointed. Redesigned Stage 4 exposes `train --text TEXT --merges 1`, learns one merge rule, and emits both the model fields and post-merge IDs; it is engineering-verified and learner-accepted.
 
-The next step is to audit and frame revised Stage 4, corresponding to the source challenge's single-pair replacement diagnostic.
+The next step is revised Stage 5, which retains the source's Stage 7 tie-breaking extension and orders candidates by frequency descending, left ID ascending, then right ID ascending.
 
 ## Where to start
 
