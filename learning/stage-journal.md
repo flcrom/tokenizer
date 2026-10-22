@@ -645,6 +645,62 @@ The adversarial model `[[169,195]]` makes token 256 expand to bytes `[169,195]`,
 - Learning status: `signed_off`
 - Date signed off: 2026-10-23.
 
+## Stage 12 — Reject invalid inputs cleanly
+
+### Contract
+
+- Stage name: Reject invalid inputs cleanly
+- New observable behavior: every failure exits 1 with empty stdout and one JSON error object on stderr; commands validate input, filesystem boundaries, model structure, token-graph structure, and decode-token existence before success output.
+- Main concept: bytes, token IDs, user input, model definitions, and operating-system failures are different domains and require different validation.
+- Explicit non-goals: Unicode-text validity—the tokenizer preserves arbitrary bytes and does not reject a byte merely because it is not valid UTF-8 by itself.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My understanding before implementation
+
+Learner reasoning, preserved from the stage discussion:
+
+> we only have 0-255 as 1 byte out of the 4 bytes that a utf 8 can be represented in, if a utf-8 character takes 2 bytes, each of those bytes can be represented in 0-255. for 2 byte characters, the values should begin from whatever is defined in the utf-8 convention otherwise it doesnt represent any byte as far as i am aware. so are the unkown bytes something that is other than these bytes which can be defined in convention ?
+
+- Correct part: every position in a one- to four-byte UTF-8 encoding is still one byte with a value from 0 through 255; UTF-8 defines structural bit patterns across those bytes.
+- Correction: all 256 values are real bytes even when a byte sequence is not valid UTF-8 text. A byte-level tokenizer therefore has no unknown byte. `unknown_token` means a nonnegative token ID not defined by the selected vocabulary—for example 999 in a three-rule model whose valid IDs end at 258.
+- Stage-size decision: implement source Stage 16 as one provisional stage, measure the verified diff, then decide from actual evidence whether to split it.
+
+### What AI implemented
+
+- Important files and symbols: `tokenizerError`, `errorResponse`, and `codeForError` establish the four-code boundary; each command now checks explicit flags and classifies writes; `parseIDs` rejects malformed, null, non-integer, and negative arrays; `parseModel` decodes required fields without rejecting unknown fields; `validateModel` checks metadata, pair shape, operand availability, and duplicates; base and model decoding classify IDs outside their vocabulary as `unknown_token`.
+- Error codes: `invalid_input` covers command data and flags; `io_error` covers read/write failures; `invalid_model` covers JSON/schema/token-graph defects; `unknown_token` covers nonnegative decode IDs outside the validated vocabulary.
+- Model-graph invariant: merge entry `i` creates ID `256 + i`; both operands must be nonnegative and strictly smaller than that ID, so base and earlier learned tokens are allowed while self and future references are rejected.
+- Output invariant: validation completes before success output. On failure, `main` serializes exactly `{"error":"<code>"}` to stderr and exits 1; internal diagnostic details are not exposed as unstable public output.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 12 --debug`.
+- Observed result: 22 of 23 cases failed. The extra-field regression already passed; other cases exposed plain-text errors, missing validation, silent byte wrapping, or accepted invalid models.
+- Command or check: after implementation, `./challenge test --stage 12 --previous`.
+- Observed result: all 92 cumulative black-box executions passed after adding 25 Stage 12 cases and updating earlier model-loading failures to the final structured contract.
+- Measured implementation diff against accepted Stage 11: `app/main.go` changed by 177 additions and 47 deletions (224 lines of churn, net +130). Unit tests changed by 59 additions and 3 deletions. The new 25-case stage manifest adds 147 lines, and the earlier Stage 9 manifest changes 2 additions and 2 deletions to adopt the final JSON error contract.
+- Measured complete workspace diff against accepted Stage 11: 465 additions and 60 deletions across eight files, including 80 documentation/metadata additions and 8 documentation/metadata deletions. The complete 525-line churn is therefore not the amount of tokenizer code the learner must understand; the production-code portion is 224 changed lines.
+- What this proves: the four public error classes are structurally stable, stdout stays empty in covered failures, every specified invalid-model family is rejected, unknown bytes are not confused with unknown token IDs, and all earlier valid behavior remains active.
+- What this does not prove: resource-exhaustion safety for adversarially huge but structurally valid models, security hardening beyond the course contract, or learner acceptance of the stage size.
+
+### Boundary examples
+
+- Byte `169` is always a known base token even though `[169]` alone is not valid UTF-8 text.
+- With three merges, valid IDs are `0..258`; decoding ID `999` returns `unknown_token`.
+- Rule 1 may reference ID 256 because rule 0 created it; rule 0 may not reference 256 because that would be a self-reference.
+- A missing model path is `io_error`; malformed contents in a readable model file are `invalid_model`.
+- Negative decode ID `-1` is malformed user input and therefore `invalid_input`, not `unknown_token`.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 12.
+- AI feedback on gaps: the learner correctly separated byte values from UTF-8 sequence validity after clarification, requested an implementation-first size audit rather than a speculative split, reviewed the resulting 224-line production-code churn separately from test and documentation volume, and chose to keep the source stage whole.
+- Learner acceptance: reviewed and accepted the complete implementation as one stage.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-23.
+
 ## Stage template
 
 ### Contract

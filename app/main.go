@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Dispatches learned-model encoding and decoding, pair diagnostics, and deterministic tokenizer training with persistence.
+ * @description Dispatches validated tokenizer operations with structured errors, learned-model inference, diagnostics, training, and persistence.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -20,14 +20,52 @@ import (
 func main() {
 	// take all the arguments other than the executable itself and pass it to the run function.
 	if err := run(os.Args[1:], os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_ = json.NewEncoder(os.Stderr).Encode(errorResponse{Error: codeForError(err)})
 		os.Exit(1)
 	}
 }
 
+type errorCode string
+
+const (
+	errInvalidInput errorCode = "invalid_input"
+	errIO           errorCode = "io_error"
+	errInvalidModel errorCode = "invalid_model"
+	errUnknownToken errorCode = "unknown_token"
+)
+
+type tokenizerError struct {
+	code  errorCode
+	cause error
+}
+
+func (err *tokenizerError) Error() string {
+	return err.cause.Error()
+}
+
+func (err *tokenizerError) Unwrap() error {
+	return err.cause
+}
+
+type errorResponse struct {
+	Error errorCode `json:"error"`
+}
+
+func classifiedError(code errorCode, format string, arguments ...any) error {
+	return &tokenizerError{code: code, cause: fmt.Errorf(format, arguments...)}
+}
+
+func codeForError(err error) errorCode {
+	var classified *tokenizerError
+	if errors.As(err, &classified) {
+		return classified.code
+	}
+	return errInvalidInput
+}
+
 func run(arguments []string, stdout io.Writer) error {
 	if len(arguments) == 0 {
-		return errors.New("usage: tokenizer <encode|decode|pairs|train>")
+		return classifiedError(errInvalidInput, "usage: tokenizer <encode|decode|pairs|train>")
 	}
 
 	switch arguments[0] {
@@ -40,7 +78,7 @@ func run(arguments []string, stdout io.Writer) error {
 	case "train":
 		return runTrain(arguments[1:], stdout)
 	default:
-		return errors.New("usage: tokenizer <encode|decode|pairs|train>")
+		return classifiedError(errInvalidInput, "usage: tokenizer <encode|decode|pairs|train>")
 	}
 }
 
@@ -51,18 +89,22 @@ func runEncode(arguments []string, stdout io.Writer) error {
 	text := flags.String("text", "", "UTF-8 text to encode")
 	modelPath := flags.String("model", "", "path to a tokenizer model")
 	if err := flags.Parse(arguments); err != nil {
-		return errors.New("usage: tokenizer encode [--model PATH] --text TEXT")
-	}
-	if flags.NArg() != 0 {
-		return errors.New("usage: tokenizer encode [--model PATH] --text TEXT")
+		return classifiedError(errInvalidInput, "usage: tokenizer encode [--model PATH] --text TEXT")
 	}
 
 	modelProvided := false
+	textProvided := false
 	flags.Visit(func(parsedFlag *flag.Flag) {
-		if parsedFlag.Name == "model" {
+		switch parsedFlag.Name {
+		case "model":
 			modelProvided = true
+		case "text":
+			textProvided = true
 		}
 	})
+	if flags.NArg() != 0 || !textProvided {
+		return classifiedError(errInvalidInput, "usage: tokenizer encode [--model PATH] --text TEXT")
+	}
 	if modelProvided {
 		model, err := loadModel(*modelPath)
 		if err != nil {
@@ -72,10 +114,16 @@ func runEncode(arguments []string, stdout io.Writer) error {
 		if err != nil {
 			return err
 		}
-		return json.NewEncoder(stdout).Encode(ids)
+		if err := json.NewEncoder(stdout).Encode(ids); err != nil {
+			return classifiedError(errIO, "write stdout: %w", err)
+		}
+		return nil
 	}
 
-	return json.NewEncoder(stdout).Encode(encodeBytes(*text))
+	if err := json.NewEncoder(stdout).Encode(encodeBytes(*text)); err != nil {
+		return classifiedError(errIO, "write stdout: %w", err)
+	}
+	return nil
 }
 
 func runDecode(arguments []string, stdout io.Writer) error {
@@ -84,23 +132,27 @@ func runDecode(arguments []string, stdout io.Writer) error {
 	encodedIDs := flags.String("ids", "", "JSON array of base token IDs")
 	modelPath := flags.String("model", "", "path to a tokenizer model")
 	if err := flags.Parse(arguments); err != nil {
-		return errors.New("usage: tokenizer decode [--model PATH] --ids JSON")
+		return classifiedError(errInvalidInput, "usage: tokenizer decode [--model PATH] --ids JSON")
 	}
-	if flags.NArg() != 0 {
-		return errors.New("usage: tokenizer decode [--model PATH] --ids JSON")
+	idsProvided := false
+	modelProvided := false
+	flags.Visit(func(parsedFlag *flag.Flag) {
+		switch parsedFlag.Name {
+		case "ids":
+			idsProvided = true
+		case "model":
+			modelProvided = true
+		}
+	})
+	if flags.NArg() != 0 || !idsProvided {
+		return classifiedError(errInvalidInput, "usage: tokenizer decode [--model PATH] --ids JSON")
 	}
 
 	ids, err := parseIDs(*encodedIDs)
 	if err != nil {
-		return fmt.Errorf("parse --ids: %w", err)
+		return err
 	}
 
-	modelProvided := false
-	flags.Visit(func(parsedFlag *flag.Flag) {
-		if parsedFlag.Name == "model" {
-			modelProvided = true
-		}
-	})
 	if modelProvided {
 		model, err := loadModel(*modelPath)
 		if err != nil {
@@ -110,12 +162,20 @@ func runDecode(arguments []string, stdout io.Writer) error {
 		if err != nil {
 			return err
 		}
-		_, err = stdout.Write(decoded)
-		return err
+		if _, err = stdout.Write(decoded); err != nil {
+			return classifiedError(errIO, "write stdout: %w", err)
+		}
+		return nil
 	}
 
-	_, err = stdout.Write(decodeBaseIDs(ids))
-	return err
+	decoded, err := decodeBaseIDs(ids)
+	if err != nil {
+		return err
+	}
+	if _, err = stdout.Write(decoded); err != nil {
+		return classifiedError(errIO, "write stdout: %w", err)
+	}
+	return nil
 }
 
 func runPairs(arguments []string, stdout io.Writer) error {
@@ -123,18 +183,27 @@ func runPairs(arguments []string, stdout io.Writer) error {
 	flags.SetOutput(io.Discard)
 	encodedIDs := flags.String("ids", "", "JSON array of token IDs")
 	if err := flags.Parse(arguments); err != nil {
-		return errors.New("usage: tokenizer pairs --ids JSON")
+		return classifiedError(errInvalidInput, "usage: tokenizer pairs --ids JSON")
 	}
-	if flags.NArg() != 0 {
-		return errors.New("usage: tokenizer pairs --ids JSON")
+	idsProvided := false
+	flags.Visit(func(parsedFlag *flag.Flag) {
+		if parsedFlag.Name == "ids" {
+			idsProvided = true
+		}
+	})
+	if flags.NArg() != 0 || !idsProvided {
+		return classifiedError(errInvalidInput, "usage: tokenizer pairs --ids JSON")
 	}
 
 	ids, err := parseIDs(*encodedIDs)
 	if err != nil {
-		return fmt.Errorf("parse --ids: %w", err)
+		return err
 	}
 
-	return json.NewEncoder(stdout).Encode(countAdjacentPairs(ids))
+	if err := json.NewEncoder(stdout).Encode(countAdjacentPairs(ids)); err != nil {
+		return classifiedError(errIO, "write stdout: %w", err)
+	}
+	return nil
 }
 
 func runTrain(arguments []string, stdout io.Writer) error {
@@ -145,7 +214,7 @@ func runTrain(arguments []string, stdout io.Writer) error {
 	outputPath := flags.String("output", "", "path for the trained model")
 	mergeLimit := flags.Int("merges", 0, "maximum number of merge rules to learn")
 	if err := flags.Parse(arguments); err != nil {
-		return errors.New("usage: tokenizer train <--text TEXT|--input PATH> --merges N [--output PATH]")
+		return classifiedError(errInvalidInput, "usage: tokenizer train <--text TEXT|--input PATH> --merges N [--output PATH]")
 	}
 	mergeLimitProvided := false
 	textProvided := false
@@ -164,7 +233,7 @@ func runTrain(arguments []string, stdout io.Writer) error {
 		}
 	})
 	if flags.NArg() != 0 || !mergeLimitProvided || *mergeLimit < 0 || textProvided == inputProvided {
-		return errors.New("usage: tokenizer train <--text TEXT|--input PATH> --merges N [--output PATH]")
+		return classifiedError(errInvalidInput, "usage: tokenizer train <--text TEXT|--input PATH> --merges N [--output PATH]")
 	}
 
 	var corpus []byte
@@ -172,7 +241,7 @@ func runTrain(arguments []string, stdout io.Writer) error {
 	if inputProvided {
 		corpus, err = os.ReadFile(*inputPath)
 		if err != nil {
-			return fmt.Errorf("read --input: %w", err)
+			return classifiedError(errIO, "read --input: %w", err)
 		}
 	} else {
 		corpus = []byte(*text)
@@ -184,23 +253,33 @@ func runTrain(arguments []string, stdout io.Writer) error {
 	}
 	encodedModel, err := json.Marshal(result.model)
 	if err != nil {
-		return fmt.Errorf("encode model: %w", err)
+		return classifiedError(errInvalidModel, "encode model: %w", err)
 	}
 	encodedModel = append(encodedModel, '\n')
 
 	if outputProvided {
 		if err := os.WriteFile(*outputPath, encodedModel, 0o644); err != nil {
-			return fmt.Errorf("write --output: %w", err)
+			return classifiedError(errIO, "write --output: %w", err)
 		}
 	}
-	_, err = stdout.Write(encodedModel)
-	return err
+	if _, err = stdout.Write(encodedModel); err != nil {
+		return classifiedError(errIO, "write stdout: %w", err)
+	}
+	return nil
 }
 
 func parseIDs(encoded string) ([]int, error) {
 	var ids []int
 	if err := json.Unmarshal([]byte(encoded), &ids); err != nil {
-		return nil, err
+		return nil, classifiedError(errInvalidInput, "parse --ids: %w", err)
+	}
+	if ids == nil {
+		return nil, classifiedError(errInvalidInput, "parse --ids: expected an array")
+	}
+	for _, id := range ids {
+		if id < 0 {
+			return nil, classifiedError(errInvalidInput, "parse --ids: token IDs must be nonnegative")
+		}
 	}
 	return ids, nil
 }
@@ -214,12 +293,15 @@ func encodeBytes(text string) []int {
 	return ids
 }
 
-func decodeBaseIDs(ids []int) []byte {
+func decodeBaseIDs(ids []int) ([]byte, error) {
 	decoded := make([]byte, len(ids))
 	for index, id := range ids {
+		if id < 0 || id >= baseVocabSize {
+			return nil, classifiedError(errUnknownToken, "unknown token ID %d", id)
+		}
 		decoded[index] = byte(id)
 	}
-	return decoded
+	return decoded, nil
 }
 
 type tokenPair struct {
@@ -275,21 +357,69 @@ type trainingResult struct {
 func loadModel(path string) (tokenizerModel, error) {
 	encodedModel, err := os.ReadFile(path)
 	if err != nil {
-		return tokenizerModel{}, fmt.Errorf("read --model: %w", err)
+		return tokenizerModel{}, classifiedError(errIO, "read --model: %w", err)
+	}
+	return parseModel(encodedModel)
+}
+
+func parseModel(encodedModel []byte) (tokenizerModel, error) {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(encodedModel, &object); err != nil || object == nil {
+		return tokenizerModel{}, classifiedError(errInvalidModel, "parse --model: malformed JSON")
+	}
+
+	versionJSON, versionPresent := object["version"]
+	baseSizeJSON, baseSizePresent := object["base_vocab_size"]
+	mergesJSON, mergesPresent := object["merges"]
+	if !versionPresent || !baseSizePresent || !mergesPresent {
+		return tokenizerModel{}, classifiedError(errInvalidModel, "parse --model: missing required field")
 	}
 
 	var model tokenizerModel
-	if err := json.Unmarshal(encodedModel, &model); err != nil {
-		return tokenizerModel{}, fmt.Errorf("parse --model: %w", err)
+	if err := json.Unmarshal(versionJSON, &model.Version); err != nil {
+		return tokenizerModel{}, classifiedError(errInvalidModel, "parse --model version: %w", err)
+	}
+	if err := json.Unmarshal(baseSizeJSON, &model.BaseVocabSize); err != nil {
+		return tokenizerModel{}, classifiedError(errInvalidModel, "parse --model base_vocab_size: %w", err)
+	}
+	if err := json.Unmarshal(mergesJSON, &model.Merges); err != nil || model.Merges == nil {
+		return tokenizerModel{}, classifiedError(errInvalidModel, "parse --model merges: expected an array")
+	}
+	if err := validateModel(model); err != nil {
+		return tokenizerModel{}, err
 	}
 	return model, nil
+}
+
+func validateModel(model tokenizerModel) error {
+	if model.Version != 1 || model.BaseVocabSize != baseVocabSize {
+		return classifiedError(errInvalidModel, "unsupported model metadata")
+	}
+
+	seenPairs := make(map[tokenPair]struct{}, len(model.Merges))
+	for mergeIndex, encodedPair := range model.Merges {
+		if len(encodedPair) != 2 {
+			return classifiedError(errInvalidModel, "model merge %d must contain exactly two token IDs", mergeIndex)
+		}
+		newID := model.BaseVocabSize + mergeIndex
+		left, right := encodedPair[0], encodedPair[1]
+		if left < 0 || left >= newID || right < 0 || right >= newID {
+			return classifiedError(errInvalidModel, "model merge %d references an unavailable token ID", mergeIndex)
+		}
+		pair := tokenPair{left: left, right: right}
+		if _, exists := seenPairs[pair]; exists {
+			return classifiedError(errInvalidModel, "model merge %d duplicates an earlier pair", mergeIndex)
+		}
+		seenPairs[pair] = struct{}{}
+	}
+	return nil
 }
 
 func encodeWithModel(text string, model tokenizerModel) ([]int, error) {
 	ids := encodeBytes(text)
 	for mergeIndex, encodedPair := range model.Merges {
 		if len(encodedPair) != 2 {
-			return nil, fmt.Errorf("model merge %d must contain exactly two token IDs", mergeIndex)
+			return nil, classifiedError(errInvalidModel, "model merge %d must contain exactly two token IDs", mergeIndex)
 		}
 		pair := tokenPair{left: encodedPair[0], right: encodedPair[1]}
 		ids = replacePair(ids, pair, model.BaseVocabSize+mergeIndex)
@@ -305,12 +435,12 @@ func buildTokenExpansions(model tokenizerModel) ([][]byte, error) {
 
 	for mergeIndex, encodedPair := range model.Merges {
 		if len(encodedPair) != 2 {
-			return nil, fmt.Errorf("model merge %d must contain exactly two token IDs", mergeIndex)
+			return nil, classifiedError(errInvalidModel, "model merge %d must contain exactly two token IDs", mergeIndex)
 		}
 		newID := model.BaseVocabSize + mergeIndex
 		left, right := encodedPair[0], encodedPair[1]
 		if left < 0 || left >= newID || right < 0 || right >= newID {
-			return nil, fmt.Errorf("model merge %d references an unavailable token ID", mergeIndex)
+			return nil, classifiedError(errInvalidModel, "model merge %d references an unavailable token ID", mergeIndex)
 		}
 
 		expansion := make([]byte, 0, len(expansions[left])+len(expansions[right]))
@@ -330,7 +460,7 @@ func decodeWithModel(ids []int, model tokenizerModel) ([]byte, error) {
 	decoded := make([]byte, 0)
 	for _, id := range ids {
 		if id < 0 || id >= len(expansions) {
-			return nil, fmt.Errorf("unknown token ID %d", id)
+			return nil, classifiedError(errUnknownToken, "unknown token ID %d", id)
 		}
 		decoded = append(decoded, expansions[id]...)
 	}

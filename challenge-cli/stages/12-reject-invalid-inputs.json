@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "stage": 12,
+  "slug": "reject-invalid-inputs",
+  "title": "Reject invalid inputs cleanly",
+  "cases": [
+    {
+      "name": "rejects an unknown learned token",
+      "args": ["decode", "--model", "model.json", "--ids", "[999]"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,110]]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "unknown_token"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects an undefined base-only decode ID",
+      "args": ["decode", "--ids", "[256]"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "unknown_token"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects malformed IDs JSON",
+      "args": ["decode", "--ids", "[1,"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_input"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects non-integer IDs",
+      "args": ["decode", "--ids", "[1.5]"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_input"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects negative IDs",
+      "args": ["pairs", "--ids", "[-1,2]"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_input"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects missing encode text",
+      "args": ["encode"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_input"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a non-integer merge budget",
+      "args": ["train", "--text", "abab", "--merges", "one"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_input"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a negative merge budget",
+      "args": ["train", "--text", "abab", "--merges", "-1"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_input"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects conflicting corpus sources",
+      "args": ["train", "--text", "abab", "--input", "corpus.txt", "--merges", "1"],
+      "files": [{"path": "corpus.txt", "content": {"text": "abab"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_input"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a missing corpus source",
+      "args": ["train", "--merges", "1"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_input"}}, "exit_code": 1}
+    },
+    {
+      "name": "classifies an unreadable model",
+      "args": ["encode", "--model", "missing.json", "--text", "Hi"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "io_error"}}, "exit_code": 1}
+    },
+    {
+      "name": "classifies an unreadable corpus",
+      "args": ["train", "--input", "missing.txt", "--merges", "1"],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "io_error"}}, "exit_code": 1}
+    },
+    {
+      "name": "classifies an unwritable output",
+      "args": ["train", "--text", "abab", "--merges", "1", "--output", "."],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "io_error"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects malformed model JSON",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{not json"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a missing required model field",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a wrong model version",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":2,\"base_vocab_size\":256,\"merges\":[]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a wrong base vocabulary size",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":128,\"merges\":[]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a wrongly typed required model field",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":\"1\",\"base_vocab_size\":256,\"merges\":[]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a malformed merge entry",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97]]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a non-integer model operand",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97.5,98]]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a negative ID inside a model rule",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[-1,97]]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a self-referencing model rule",
+      "args": ["decode", "--model", "model.json", "--ids", "[]"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[256,97]]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects a future-token model reference",
+      "args": ["decode", "--model", "model.json", "--ids", "[]"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[257,97],[97,98]]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "rejects duplicate model pairs",
+      "args": ["encode", "--model", "model.json", "--text", "abab"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,98],[97,98]]}"}}],
+      "expect": {"stdout": {"mode": "empty"}, "stderr": {"mode": "json", "json": {"error": "invalid_model"}}, "exit_code": 1}
+    },
+    {
+      "name": "accepts unknown extra model fields",
+      "args": ["encode", "--model", "model.json", "--text", "Hi"],
+      "files": [{"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[],\"note\":\"ignored\"}"}}],
+      "expect": {"stdout": {"mode": "json", "json": [72,105]}, "stderr": {"mode": "empty"}, "exit_code": 0}
+    }
+  ]
+}

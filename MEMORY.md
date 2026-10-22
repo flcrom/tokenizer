@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches learned-model encoding and decoding, model loading, pair diagnostics, deterministic training, and persistence. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests learned-model encoding and decoding, model loading, deterministic training, stopping, and raw byte preservation. | Application entry point | — |
+| `app/main.go` | Dispatches validated tokenizer operations with structured errors, learned-model inference, diagnostics, training, and persistence. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests model validation, error classification, learned-model inference, deterministic training, and raw byte preservation. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -80,12 +80,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; revised Stages 1–10 are accepted and checkpointed, and revised Stage 11 learned-model decoding is engineering-verified and learner-accepted.
-- Completed: accepted and checkpointed Stages 1–10; accepted base and hierarchical learned-token decoding; exact invalid-UTF-8 fragment preservation; focused unit tests; and 67 cumulative black-box executions.
-- Not completed: curated checkpoint for Stage 11 or the final structured validation and error contract.
+- Phase: 5 complete; all twelve revised implementation stages are accepted and checkpointed, and integrated validation plus final challenge documentation are next.
+- Completed: accepted and checkpointed Stages 1–12; four-code structured failures; CLI, I/O, strict model-graph, and unknown-token validation; focused unit tests; and 92 cumulative black-box executions.
+- Not completed: Phase 6 integrated validation, practical performance evidence on a modest corpus, or the final standalone Markdown challenge document and retrospective.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: checkpoint revised Stage 11, then understand and audit source Stage 16's distinction between invalid input, invalid models, unknown tokens, and I/O failures.
+- Next discussion: agree on the high-level structure of the final Markdown challenge document before drafting it.
 
 ## Durable decisions
 
@@ -164,3 +164,11 @@ Original Stages 12–14 become revised Stage 10. Its cases explicitly distinguis
 ### 2026-10-22 — Build learned-token byte expansions for revised Stage 11
 
 Original Stage 15 becomes revised Stage 11. Decoding builds expansions forward in model order: each base ID maps to one byte, and learned ID `base_vocab_size + i` concatenates its rule operands' already-built expansions. Requested token expansions are concatenated before one raw-byte write. This is equivalent to replacing learned IDs from highest to lowest, but avoids repeatedly expanding the same token and correctly preserves fragments that are not independently valid UTF-8.
+
+### 2026-10-23 — Implement source Stage 16 whole before judging its size
+
+Original Stage 16 provisionally becomes revised Stage 12 without an advance split. The implementation introduces a four-code JSON error boundary, explicit required-flag and nonnegative-ID checks, I/O classification, strict required-field decoding, token-graph validation, duplicate-pair rejection, and vocabulary-bound checks. Earlier error fixtures are updated to the final contract. The stage remains unaccepted until the learner reviews its measured code, tests, fixtures, and documentation diff and decides whether one checkpoint is still satisfactory.
+
+### 2026-10-23 — Keep and accept source Stage 16 as revised Stage 12
+
+After reviewing the verified implementation and its measured diff, the learner kept source Stage 16 whole. The production code changed by 177 additions and 47 deletions; most remaining repository churn came from the 25-case black-box manifest, focused tests, and documentation. The learner accepted the stage as one coherent final validation boundary, completing Phase 5 with all twelve revised stages checkpointed.

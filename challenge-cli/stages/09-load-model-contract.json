@@ -42,7 +42,7 @@
       "args": ["encode", "--model", "missing.json", "--text", "Hi!"],
       "expect": {
         "stdout": {"mode": "empty"},
-        "stderr": {"mode": "contains_text", "text": "read --model"},
+        "stderr": {"mode": "json", "json": {"error": "io_error"}},
         "exit_code": 1
       }
     },
@@ -54,7 +54,7 @@
       ],
       "expect": {
         "stdout": {"mode": "empty"},
-        "stderr": {"mode": "contains_text", "text": "parse --model"},
+        "stderr": {"mode": "json", "json": {"error": "invalid_model"}},
         "exit_code": 1
       }
     }
