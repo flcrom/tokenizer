@@ -141,6 +141,76 @@ AI clarification accepted during review: `stdout.Write` is used because the toke
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 3 — Count adjacent pairs
+
+### Contract
+
+- Stage name: Count adjacent pairs
+- New observable behavior: `pairs --ids JSON` prints sorted `[leftID,rightID,count]` records for every distinct adjacent pair.
+- Main concept: pair frequency is counted over overlapping adjacent windows.
+- Explicit non-goals: selecting the most frequent pair, replacing pairs, training, merge IDs, and the final invalid-input contract.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My prediction before implementation
+
+- Expected outputs supplied by the learner:
+  - `[1,2,1,2,1]` → `[[1,2,2],[2,1,2]]`
+  - `[7,7,7,7]` → `[[7,7,3]]`
+  - `[42]` → `[]`
+- Proposed algorithm, preserved as supplied by the learner:
+
+  > the way i was thinking one should implement this is have 2 pointers, initialize one at the beginning and the other at the second place. make a key value map before this iteration where the key is the pair and the value is the frequency, increament the key for each pair and iterate the first pointer till the second last element
+  >
+  > then for each key value pair, extract the key,value,pair as left right count and sort it and return the answer
+
+- Expected intermediate states: build a pair-frequency map from `(ids[i], ids[i+1])`, then turn the map entries into records and sort by left ID followed by right ID.
+- Why: advancing both adjacent positions by one includes every window, including overlapping pairs.
+
+### What AI implemented
+
+- Important files and symbols: `app/main.go` adds `runPairs`, the shared `parseIDs` helper, the comparable `tokenPair` map key, and `countAdjacentPairs`. `app/main_test.go` unit-tests overlaps, ordering, and short inputs. `challenge-cli/stages/03-count-adjacent-pairs.json` defines six black-box cases.
+- Execution path in order: `run` dispatches `pairs`; `runPairs` parses `--ids`; `parseIDs` produces `[]int`; `countAdjacentPairs` scans `(ids[index], ids[index+1])`, increments a map, collects distinct keys, sorts them by left then right ID, and builds `[left,right,count]` records; the JSON encoder writes the records.
+- Important invariants: `n` IDs have `n-1` adjacent windows when `n` is at least one; advancing by one preserves overlaps; pair identity includes both ordered IDs; output ordering never depends on Go map iteration; zero pairs produce JSON `[]`, not `null`.
+- Language or library mechanics I had to learn: a Go struct containing integers is comparable and can be a map key; `counts[pair]++` supplies zero for an unseen key before incrementing; ranging over a map is unordered; `sort.Slice` applies the explicit left-then-right comparator.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 3 --debug`.
+- Observed result: all 6 cases failed because `pairs` was not recognized.
+- Command or check: after implementation, `./challenge test --stage 3 --previous`.
+- Observed result: all 22 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, and 6 from Stage 3.
+- Command or check: root `go test ./...` and `go vet ./...`; challenge module `go test -race ./...` and `go vet ./...`.
+- Observed result: all checks exited 0 with the project-local Go caches.
+- What this proves: adjacent pairs are counted with overlaps, arbitrary token IDs are supported, records are sorted by numeric pair rather than count or map order, short inputs produce `[]`, and earlier behavior remains active.
+- What this does not prove: choosing a winning pair, replacing occurrences, training, or learner understanding.
+
+### My explanation after reading the code
+
+The learner's implementation model was recorded before implementation: scan every adjacent `(ids[index], ids[index+1])` pair, increment its map frequency, turn map entries into records, and sort the result.
+
+During code review, the learner asked:
+
+> why exactly are we sorting based on left first and then right after wards and not by frequency ? because when we have to do the merges, we will have to sort this by frequency right and take the most frequent pair and then merge it ?
+
+AI clarification accepted during review: the `pairs` diagnostic uses numeric pair order to provide stable, canonical output. A later training stage performs a separate winner-selection operation using highest frequency first and numeric pair order only as its tie-break. Selecting a winner does not require changing this diagnostic output contract or sorting the entire table by frequency.
+
+### Adversarial case
+
+- Input: `[256,97,256,97]`
+- Expected behavior: `[[97,256,1],[256,97,2]]`.
+- Why this case is useful: numeric pair order intentionally places the less-frequent pair first. Sorting by frequency would reverse the records, so this case distinguishes diagnostic ordering from future merge selection.
+- Observed behavior, if run: the black-box harness passed with numeric left-then-right ordering.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 3.
+- AI feedback on gaps: the learner's algorithm was correct, and their sorting question identified the precise bug targeted by the adversarial case.
+- Learner acceptance: accepted as satisfying enough in terms of implementation before moving to the next stage.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
 ## Stage template
 
 ### Contract

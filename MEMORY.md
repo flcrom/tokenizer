@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches encode/decode commands and converts between UTF-8 bytes and base token IDs. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base-token encoding, decoding, and UTF-8 byte round trips. | Application entry point | — |
+| `app/main.go` | Dispatches byte encoding, base decoding, and adjacent-pair counting commands. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base-token round trips and deterministic adjacent-pair counting. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -76,12 +76,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; revised Stage 2 is engineering-verified, learning-signed-off, and accepted.
-- Completed: Stage 1 acceptance and checkpoint; Stage 2/3 merge audit; revised Stage 2 UTF-8 encoding and base-token decoding; unit round trips; 16 cumulative black-box cases; explanation; adversarial review; and learner acceptance.
-- Not completed: curated Stage 2 Git checkpoint or later tokenizer stages.
+- Phase: 5 in progress; revised Stage 3 pair counting is engineering-verified, learning-signed-off, and accepted.
+- Completed: accepted and checkpointed Stages 1–2; Stage 3 counting implementation; 22 cumulative black-box cases; deterministic-order explanation; adversarial review; and learner acceptance.
+- Not completed: curated Stage 3 Git checkpoint or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: audit and frame revised Stage 3, corresponding to original Stage 4 pair counting.
+- Next discussion: audit and frame revised Stage 4, corresponding to original Stage 5 single-pair replacement.
 
 ## Durable decisions
 
@@ -120,3 +120,7 @@ Original Stage 2 is conceptually important but provides no new implementation in
 ### 2026-10-22 — Accept revised Stage 2 byte round trips
 
 Revised Stage 2 passed 16 cumulative black-box cases plus unit, race, vet, shell, raw-byte, and metadata checks. The learner explained the raw `stdout.Write` boundary and evaluated `[0,10,255]` as an adversarial case that distinguishes exact byte preservation from Unicode-text formatting. The merged stage was accepted before moving to pair counting.
+
+### 2026-10-22 — Keep and accept pair counting as revised Stage 3
+
+Original Stage 4 remains independent as revised Stage 3 because it introduces an observable BPE primitive: overlapping adjacent windows, ordered compound map keys, frequency accumulation, and deterministic numeric reporting. The learner distinguished the diagnostic's left-then-right output order from later frequency-based winner selection and accepted the implementation after 22 cumulative cases passed.
