@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Parses the Stage 1 command and converts text bytes to integer token IDs. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests the Stage 1 byte-to-token conversion. | Application entry point | — |
+| `app/main.go` | Dispatches encode/decode commands and converts between UTF-8 bytes and base token IDs. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base-token encoding, decoding, and UTF-8 byte round trips. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -76,12 +76,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; Stage 1 is engineering-verified, learning-signed-off, and explicitly accepted.
-- Completed: foundations; Go selection; CodeCrafters-style starter; separate local challenge module; harness review; Stage 1 contract, audit decision, implementation, unit tests, seven black-box acceptance cases including ASCII control whitespace, explanation, adversarial review, and learner acceptance.
-- Not completed: Stage 1 curated Git checkpoint or later tokenizer stages.
+- Phase: 5 in progress; revised Stage 2 is engineering-verified, learning-signed-off, and accepted.
+- Completed: Stage 1 acceptance and checkpoint; Stage 2/3 merge audit; revised Stage 2 UTF-8 encoding and base-token decoding; unit round trips; 16 cumulative black-box cases; explanation; adversarial review; and learner acceptance.
+- Not completed: curated Stage 2 Git checkpoint or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: audit the proposed Stage 2 UTF-8 boundary before implementation.
+- Next discussion: audit and frame revised Stage 3, corresponding to original Stage 4 pair counting.
 
 ## Durable decisions
 
@@ -112,3 +112,11 @@ The learner application is a root Go module with `app/main.go` and the stable `y
 ### 2026-10-22 — Keep and accept Stage 1 as the first executable slice
 
 Stage 1 remains independent even though byte-to-ID conversion is only a few lines. Its learning boundary includes establishing the first complete command-line path: argument parsing, byte representation, integer token IDs, JSON output, launcher execution, and black-box verification. Engineering passed seven cases, and the learner explained and accepted the stage.
+
+### 2026-10-22 — Merge original UTF-8 encoding and base decoding stages
+
+Original Stage 2 is conceptually important but provides no new implementation in Go because the accepted Stage 1 already converts the string to its underlying UTF-8 bytes. Official documentation shows similarly direct byte paths in Rust and Ruby, while Python, JavaScript, and Java require only a small standard-library representation change. Original Stages 2 and 3 are therefore merged into revised Stage 2: encode arbitrary valid UTF-8 as base byte IDs and decode base IDs back to exact bytes.
+
+### 2026-10-22 — Accept revised Stage 2 byte round trips
+
+Revised Stage 2 passed 16 cumulative black-box cases plus unit, race, vet, shell, raw-byte, and metadata checks. The learner explained the raw `stdout.Write` boundary and evaluated `[0,10,255]` as an adversarial case that distinguishes exact byte preservation from Unicode-text formatting. The merged stage was accepted before moving to pair counting.
