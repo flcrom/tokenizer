@@ -67,6 +67,7 @@ Populate this only after the high-level source orientation.
 | 8 — Learn successive merges | Permit positive `--merges N`, recount after every replacement, and let later rules reference learned IDs | Each merge changes the next frequency table | Substantial but cohesive loop over the established primitives | `keep` as revised Stage 6 | Reuse deterministic selection and replacement in a loop. Compare one-, two-, and three-merge runs on the same text so stale frequency tables and incorrect learned IDs are observable. |
 | 9 — Stop training safely | Treat `N` as an upper bound; stop when the best count is below 2; support zero, empty, and one-byte inputs | Normal termination is distinct from failure | Small implementation delta but essential algorithmic contract | `keep` as revised Stage 7 | The loop and minimum-frequency detection already exist, but Stage 7 turns the latter into successful completion and verifies every boundary from the source document. |
 | 10 — Save a trained model | Add raw `--input PATH` as an alternative corpus source and optional `--output PATH` persistence | A learned model is portable data; corpus bytes must remain unchanged | Moderate I/O boundary around stable training logic | `keep` as revised Stage 8 | Read the corpus with `os.ReadFile`, train through the byte-oriented core, serialize the canonical model once, and write the same JSON bytes to the file and stdout. |
+| 11 — Load a model | Add `encode --model PATH`; parse a saved empty model in a fresh process without changing base-byte output | Persistence becomes useful only when another operation can reconstruct the model | Focused file-read and JSON-boundary stage | `keep` as revised Stage 9 | An empty merge list isolates loading from learned-rule application. Missing and malformed files fail cleanly; whitespace and JSON key order do not matter. Nonempty-rule encoding remains source Stage 12. |
 
 ## Revised Stage 4 contract
 
@@ -89,6 +90,10 @@ The command and output shape remain `train --text TEXT --merges 1`. When several
 ## Revised Stage 8 contract
 
 `train` requires exactly one corpus source: `--text TEXT` or `--input PATH`. `--input` reads every file byte unchanged, including newlines and bytes that are not valid UTF-8. Training otherwise reuses the existing merge budget and stopping behavior. Stdout always prints the canonical model JSON; optional `--output PATH` writes the same serialized bytes to disk. JSON parsing is not needed yet because this stage creates a model—loading and validating model JSON begins with the source's Stage 11.
+
+## Revised Stage 9 contract
+
+`encode --model PATH --text TEXT` reads and JSON-decodes the canonical model in a fresh process. For this stage, the supplied model must have an empty `merges` array, so encoding still returns the UTF-8 byte IDs unchanged. JSON whitespace and object-key order are irrelevant. An unreadable path or malformed JSON exits nonzero without stdout. A nonempty model is deliberately rejected because applying learned rules is source Stage 12; full semantic validation of model fields remains deferred to the source's final validation stage.
 
 ## Cross-language evidence for the Stage 2 decision
 

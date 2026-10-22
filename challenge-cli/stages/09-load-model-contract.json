@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "stage": 9,
+  "slug": "load-model-contract",
+  "title": "Load an empty model contract",
+  "cases": [
+    {
+      "name": "loads an empty model in a fresh process",
+      "args": ["encode", "--model", "empty.json", "--text", "Hi!"],
+      "files": [
+        {"path": "empty.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [72, 105, 33]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "accepts whitespace and reordered model keys",
+      "args": ["encode", "--model", "reordered.json", "--text", "café"],
+      "files": [
+        {"path": "reordered.json", "content": {"text": "{\n  \"merges\": [],\n  \"base_vocab_size\": 256,\n  \"version\": 1\n}\n"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [99, 97, 102, 195, 169]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "keeps no-model encoding compatible",
+      "args": ["encode", "--text", "Hi!"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [72, 105, 33]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "fails when the model file is missing",
+      "args": ["encode", "--model", "missing.json", "--text", "Hi!"],
+      "expect": {
+        "stdout": {"mode": "empty"},
+        "stderr": {"mode": "contains_text", "text": "read --model"},
+        "exit_code": 1
+      }
+    },
+    {
+      "name": "fails when model JSON is malformed",
+      "args": ["encode", "--model", "malformed.json", "--text", "Hi!"],
+      "files": [
+        {"path": "malformed.json", "content": {"text": "{not json"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "empty"},
+        "stderr": {"mode": "contains_text", "text": "parse --model"},
+        "exit_code": 1
+      }
+    }
+  ]
+}

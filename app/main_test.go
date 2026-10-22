@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies base-token round trips, pair counting, replacement, deterministic training, safe stopping, and raw corpus-byte handling independently of the process harness.
+ * @description Verifies base-token round trips, model loading, pair counting, replacement, deterministic training, safe stopping, and raw corpus-byte handling.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -9,6 +9,7 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -271,5 +272,21 @@ func TestTrainBytesPreservesArbitraryCorpusBytes(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("trainBytes() = %#v, want %#v", got, want)
+	}
+}
+
+func TestLoadModel(t *testing.T) {
+	path := t.TempDir() + "/model.json"
+	if err := os.WriteFile(path, []byte("{\n  \"merges\": [], \"base_vocab_size\": 256, \"version\": 1\n}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	want := tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{}}
+	got, err := loadModel(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("loadModel(%q) = %#v, want %#v", path, got, want)
 	}
 }
