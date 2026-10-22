@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Dispatches byte encoding, base decoding, pair counting, and safely terminating deterministic tokenizer training.
+ * @description Dispatches byte encoding, base decoding, pair counting, and deterministic tokenizer training from text or raw files with optional model persistence.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -102,25 +102,60 @@ func runTrain(arguments []string, stdout io.Writer) error {
 	flags := flag.NewFlagSet("train", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	text := flags.String("text", "", "UTF-8 training text")
+	inputPath := flags.String("input", "", "path to a training corpus")
+	outputPath := flags.String("output", "", "path for the trained model")
 	mergeLimit := flags.Int("merges", 0, "maximum number of merge rules to learn")
 	if err := flags.Parse(arguments); err != nil {
-		return errors.New("usage: tokenizer train --text TEXT --merges N")
+		return errors.New("usage: tokenizer train <--text TEXT|--input PATH> --merges N [--output PATH]")
 	}
 	mergeLimitProvided := false
+	textProvided := false
+	inputProvided := false
+	outputProvided := false
 	flags.Visit(func(parsedFlag *flag.Flag) {
-		if parsedFlag.Name == "merges" {
+		switch parsedFlag.Name {
+		case "merges":
 			mergeLimitProvided = true
+		case "text":
+			textProvided = true
+		case "input":
+			inputProvided = true
+		case "output":
+			outputProvided = true
 		}
 	})
-	if flags.NArg() != 0 || !mergeLimitProvided || *mergeLimit < 0 {
-		return errors.New("usage: tokenizer train --text TEXT --merges N")
+	if flags.NArg() != 0 || !mergeLimitProvided || *mergeLimit < 0 || textProvided == inputProvided {
+		return errors.New("usage: tokenizer train <--text TEXT|--input PATH> --merges N [--output PATH]")
 	}
 
-	result, err := trainMerges(*text, *mergeLimit)
+	var corpus []byte
+	var err error
+	if inputProvided {
+		corpus, err = os.ReadFile(*inputPath)
+		if err != nil {
+			return fmt.Errorf("read --input: %w", err)
+		}
+	} else {
+		corpus = []byte(*text)
+	}
+
+	result, err := trainBytes(corpus, *mergeLimit)
 	if err != nil {
 		return err
 	}
-	return json.NewEncoder(stdout).Encode(result.model)
+	encodedModel, err := json.Marshal(result.model)
+	if err != nil {
+		return fmt.Errorf("encode model: %w", err)
+	}
+	encodedModel = append(encodedModel, '\n')
+
+	if outputProvided {
+		if err := os.WriteFile(*outputPath, encodedModel, 0o644); err != nil {
+			return fmt.Errorf("write --output: %w", err)
+		}
+	}
+	_, err = stdout.Write(encodedModel)
+	return err
 }
 
 func parseIDs(encoded string) ([]int, error) {
@@ -215,7 +250,14 @@ func firstMergeStep(text string) (mergeStep, error) {
 }
 
 func trainMerges(text string, mergeLimit int) (trainingResult, error) {
-	ids := encodeBytes(text)
+	return trainBytes([]byte(text), mergeLimit)
+}
+
+func trainBytes(corpus []byte, mergeLimit int) (trainingResult, error) {
+	ids := make([]int, len(corpus))
+	for index, value := range corpus {
+		ids[index] = int(value)
+	}
 	merges := make([][]int, 0, mergeLimit)
 	for mergeIndex := 0; mergeIndex < mergeLimit; mergeIndex++ {
 		step, err := nextMergeStep(ids, baseVocabSize+mergeIndex)

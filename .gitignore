@@ -15,4 +15,6 @@ coverage/
 .mypy_cache/
 .ruff_cache/
 .local/
+app/input/
+app/output/
 

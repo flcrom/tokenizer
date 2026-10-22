@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "stage": 8,
+  "slug": "save-trained-model",
+  "title": "Train from a file and save the model",
+  "cases": [
+    {
+      "name": "trains from corpus file bytes",
+      "args": ["train", "--input", "corpus.txt", "--merges", "3"],
+      "files": [
+        {"path": "corpus.txt", "content": {"text": "banana banana"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 110], [98, 256], [256, 97]]}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "writes the same canonical model to a file",
+      "args": ["train", "--input", "corpus.txt", "--merges", "3", "--output", "model.json"],
+      "files": [
+        {"path": "corpus.txt", "content": {"text": "banana banana"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 110], [98, 256], [256, 97]]}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      },
+      "expected_files": [
+        {"path": "model.json", "content": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 110], [98, 256], [256, 97]]}}}
+      ]
+    },
+    {
+      "name": "text and file input learn the same model",
+      "args": ["train", "--text", "banana banana", "--merges", "3"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 110], [98, 256], [256, 97]]}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "preserves a newline in the corpus",
+      "args": ["train", "--input", "newline.txt", "--merges", "1"],
+      "files": [
+        {"path": "newline.txt", "content": {"text": "a\na\n"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 10]]}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "preserves arbitrary corpus bytes",
+      "args": ["train", "--input", "bytes.bin", "--merges", "1"],
+      "files": [
+        {"path": "bytes.bin", "content": {"base64": "/wD/AA=="}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[255, 0]]}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    }
+  ]
+}
