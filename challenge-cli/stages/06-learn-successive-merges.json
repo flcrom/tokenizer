@@ -8,7 +8,7 @@
       "name": "learns one merge from the initial frequencies",
       "args": ["train", "--text", "banana banana", "--merges", "1"],
       "expect": {
-        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 110]], "base_vocab_size": 256, "ids": [98, 256, 256, 97, 32, 98, 256, 256, 97]}},
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 110]], "base_vocab_size": 256}},
         "stderr": {"mode": "empty"},
         "exit_code": 0
       }
@@ -17,7 +17,7 @@
       "name": "recounts before learning the second merge",
       "args": ["train", "--text", "banana banana", "--merges", "2"],
       "expect": {
-        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 110], [98, 256]], "base_vocab_size": 256, "ids": [257, 256, 97, 32, 257, 256, 97]}},
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 110], [98, 256]], "base_vocab_size": 256}},
         "stderr": {"mode": "empty"},
         "exit_code": 0
       }
@@ -26,7 +26,7 @@
       "name": "learns a third rule containing a learned ID",
       "args": ["train", "--text", "banana banana", "--merges", "3"],
       "expect": {
-        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 110], [98, 256], [256, 97]], "base_vocab_size": 256, "ids": [257, 258, 32, 257, 258]}},
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 110], [98, 256], [256, 97]], "base_vocab_size": 256}},
         "stderr": {"mode": "empty"},
         "exit_code": 0
       }

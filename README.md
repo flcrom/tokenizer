@@ -13,9 +13,9 @@ The learner does not need to type every line. The non-negotiable requirement is 
 
 ## Current boundary
 
-The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Stages 1–5 are accepted and checkpointed. Revised Stage 6 learns successive merges by recounting after every replacement; it is engineering-verified and learner-accepted.
+The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Stages 1–6 are accepted and checkpointed. Revised Stage 7 safely stops at the merge budget or when no repeated pair remains; it and the canonical model-output correction are engineering-verified and learner-accepted.
 
-The next step is to checkpoint Stage 6, then keep and implement the source's Stage 9 safe-stopping contract as revised Stage 7.
+The next step is to checkpoint Stage 7, then audit model persistence from source Stage 10.
 
 ## Where to start
 

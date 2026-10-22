@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies base-token round trips, pair counting, replacement, deterministic selection, and successive-merge training independently of the process harness.
+ * @description Verifies base-token round trips, pair counting, replacement, deterministic selection, successive training, and safe stopping independently of the process harness.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -178,9 +178,8 @@ func TestFirstMergeStep(t *testing.T) {
 func TestTrainFirstMerge(t *testing.T) {
 	want := tokenizerModel{
 		Version:       1,
-		Merges:        [][]int{{97, 98}},
 		BaseVocabSize: 256,
-		IDs:           []int{256, 256, 256},
+		Merges:        [][]int{{97, 98}},
 	}
 
 	got, err := trainFirstMerge("ababab")
@@ -193,11 +192,13 @@ func TestTrainFirstMerge(t *testing.T) {
 }
 
 func TestTrainMerges(t *testing.T) {
-	want := tokenizerModel{
-		Version:       1,
-		Merges:        [][]int{{97, 110}, {98, 256}, {256, 97}},
-		BaseVocabSize: 256,
-		IDs:           []int{257, 258, 32, 257, 258},
+	want := trainingResult{
+		model: tokenizerModel{
+			Version:       1,
+			BaseVocabSize: 256,
+			Merges:        [][]int{{97, 110}, {98, 256}, {256, 97}},
+		},
+		ids: []int{257, 258, 32, 257, 258},
 	}
 
 	got, err := trainMerges("banana banana", 3)
@@ -206,5 +207,54 @@ func TestTrainMerges(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("trainMerges(%q, %d) = %#v, want %#v", "banana banana", 3, got, want)
+	}
+}
+
+func TestTrainMergesStopsSafely(t *testing.T) {
+	tests := []struct {
+		name       string
+		text       string
+		mergeLimit int
+		want       trainingResult
+	}{
+		{
+			name:       "zero budget",
+			text:       "abab",
+			mergeLimit: 0,
+			want: trainingResult{
+				model: tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{}},
+				ids:   []int{97, 98, 97, 98},
+			},
+		},
+		{
+			name:       "no repeated pair",
+			text:       "abc",
+			mergeLimit: 10,
+			want: trainingResult{
+				model: tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{}},
+				ids:   []int{97, 98, 99},
+			},
+		},
+		{
+			name:       "stops below budget",
+			text:       "aaaaa",
+			mergeLimit: 10,
+			want: trainingResult{
+				model: tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{{97, 97}}},
+				ids:   []int{256, 256, 97},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := trainMerges(test.text, test.mergeLimit)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("trainMerges(%q, %d) = %#v, want %#v", test.text, test.mergeLimit, got, test.want)
+			}
+		})
 	}
 }

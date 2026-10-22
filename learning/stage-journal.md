@@ -216,7 +216,7 @@ AI clarification accepted during review: the `pairs` diagnostic uses numeric pai
 ### Contract
 
 - Stage name: Train the first merge
-- New observable behavior: `train --text TEXT --merges 1` performs one BPE step and prints the version, selected merge-rule array, base vocabulary size, and post-replacement IDs.
+- New observable behavior: `train --text TEXT --merges 1` performs one BPE step and prints the canonical version, base vocabulary size, and selected merge-rule array.
 - Main concept: one BPE step selects by frequency but replaces left-to-right without overlap.
 - Explicit non-goals: tied winners, caller-supplied pairs or new IDs, more than one requested merge, stopping rules, persistence, and the final invalid-input contract.
 - Engineering status: `verified`
@@ -228,18 +228,18 @@ AI clarification accepted during review: the `pairs` diagnostic uses numeric pai
 
   > ababab -> [97,98,97,98,97,98] -> [97,98,3], [98,97,2] -> replace [97,98] with 256 -> [256,256,256]
 
-- Complete expected output: `{"pair":[97,98],"count":3,"new_id":256,"ids":[256,256,256]}`.
+- Temporary inspectable result originally proposed: `{"pair":[97,98],"count":3,"new_id":256,"ids":[256,256,256]}`. This is now an internal trace rather than the final JSON contract.
 - Expected intermediate states: text → byte IDs → pair-frequency map → unique highest-frequency pair → non-overlapping replacement IDs.
 - Why: `(97,98)` occurs three times and wins over `(98,97)`, which occurs twice; each winning occurrence is disjoint in this input.
 
-Contract revision after implementation review: the learner requested only renaming the temporary `merge-top` interface to `train`, while keeping the inspectable post-replacement IDs and adding the model fields. For `train --text 'ababab' --merges 1`, the public output is `{"version":1,"merges":[[97,98]],"base_vocab_size":256,"ids":[256,256,256]}`. Original Stage 5 is removed entirely as a public stage; this revised Stage 4 is an improved implementation of original Stage 6. Original Stage 7 is retained next for tied frequencies.
+Final contract correction before persistence: the learner chose the document's canonical model JSON. For `train --text 'ababab' --merges 1`, public output is `{"version":1,"base_vocab_size":256,"merges":[[97,98]]}`. The post-replacement `[256,256,256]` remains in internal `trainingResult` tests. Original Stage 5 is removed entirely as a public stage; this revised Stage 4 is an improved implementation of original Stage 6. Original Stage 7 is retained next for tied frequencies.
 
 ### What AI implemented
 
 - Important files and symbols: `app/main.go` adds `runTrain`, reusable `pairFrequencies`, `selectUniqueTopPair`, `replacePair`, `firstMergeStep`, and `trainFirstMerge`. `tokenizerModel` defines the public JSON artifact, while the unexported `mergeStep` preserves the detailed algorithm state for unit tests. `challenge-cli/stages/04-train-first-merge.json` defines four black-box cases.
-- Execution path in order: `run` dispatches `train`; `runTrain` parses user-supplied `--text` and `--merges`, requiring the latter to equal 1 in this stage; `trainFirstMerge` calls `firstMergeStep`; that function encodes bytes, counts pairs, selects the unique highest count, assigns ID `baseVocabSize + 0`, and calls `replacePair`; `replacePair` scans left-to-right and advances by two after a match or one otherwise; training returns both the selected ordered pair in `merges` and the transformed sequence in `ids`.
+- Execution path in order: `run` dispatches `train`; `runTrain` parses user-supplied `--text` and `--merges`; training encodes bytes, counts pairs, selects the unique highest count, assigns ID `baseVocabSize + 0`, and calls `replacePair`; `trainingResult` retains both the model and transformed IDs, but `runTrain` JSON-encodes only its model.
 - Important invariants: base IDs are always 0–255 and `base_vocab_size` therefore remains 256; learned merge index 0 receives ID 256; the ordered merge list is sufficient to derive later learned IDs; counting includes overlapping windows; replacement never reuses a consumed ID; this stage requires one unique winner with count at least two; unmatched IDs retain order.
-- Language or library mechanics I had to learn: `flag.Int` parses the user-supplied merge budget; JSON struct tags produce `version`, `merges`, `base_vocab_size`, and `ids`; an unexported struct keeps the pair count and assigned ID available to same-package tests; a loop can manage its own index increment so matches advance by two and non-matches by one.
+- Language or library mechanics I had to learn: `flag.Int` parses the user-supplied merge budget; JSON struct tags produce only `version`, `base_vocab_size`, and `merges`; the unexported `trainingResult` can retain corpus-specific IDs for same-package tests without serializing them into the model.
 
 ### Evidence
 
@@ -249,11 +249,13 @@ Contract revision after implementation review: the learner requested only renami
 - Observed result: all 4 revised cases failed because `train` was not recognized and the usage still advertised `merge-top`.
 - Command or check: after clarifying that the public result must retain post-replacement IDs, `./challenge test --stage 4 --debug`.
 - Observed result: all 4 cases failed because the `train` result had the model fields but omitted `ids`.
+- Command or check: after choosing the canonical persisted format, Stage 4 fixtures removed `ids` and `./challenge test --stage 4 --debug` was rerun.
+- Observed result: all 4 cases failed because the serialized result still contained the now-extra `ids` key; separating `tokenizerModel` from `trainingResult` made them pass.
 - Command or check: after implementing the revised interface, `./challenge test --stage 4 --previous`.
 - Observed result: all 26 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, 6 from Stage 3, and 4 from Stage 4.
 - Command or check: root `go test ./...` and `go vet ./...`; challenge module `go test -race ./...` and `go vet ./...`.
 - Observed result: all checks exited 0 with the project-local Go caches.
-- What this proves: one unique most-frequent pair is selected, assigned ID 256, and replaced left-to-right without overlap; the public command emits the declared model fields and transformed IDs; overlapping counts and replacement counts remain distinct; previous behavior remains active.
+- What this proves: one unique most-frequent pair is selected, assigned ID 256, and replaced left-to-right without overlap; the public command emits only canonical model fields while tests retain transformed IDs; previous behavior remains active.
 - What this does not prove: deterministic tie-breaking, repeated merges, safe early stopping, saving and loading the model, encoding with a learned model, or learner understanding.
 
 ### My explanation after reading the code
@@ -268,9 +270,9 @@ AI clarification: the four counted windows are four overlapping occurrences of t
 ### Adversarial case
 
 - Input: `train --text 'zzzzz' --merges 1`
-- Expected public behavior: `{"version":1,"merges":[[122,122]],"base_vocab_size":256,"ids":[256,256,122]}`. The focused unit test additionally expects the internal step to count 4 windows.
+- Expected public behavior: `{"version":1,"base_vocab_size":256,"merges":[[122,122]]}`. The focused unit test expects the internal step to count 4 windows and retain transformed IDs `[256,256,122]`.
 - Why this case is useful: four overlapping counted windows produce only two non-overlapping replacements. It catches implementations that confuse frequency with replacement count or advance by one after consuming a match.
-- Observed behavior, if run: the black-box harness passed with the one-rule result including replacement IDs, and the unit test passed with count 4.
+- Observed behavior, if run: the black-box harness passed with the canonical one-rule model, and the unit test passed with count 4 and replacement IDs `[256,256,122]`.
 
 ### Questions and sign-off
 
@@ -354,7 +356,7 @@ Learner proposal, preserved from the stage discussion:
 ### What AI implemented
 
 - Important files and symbols: `trainMerges` owns the loop and accumulated rule list; `nextMergeStep` performs one select-and-replace iteration for an existing ID sequence and assigned ID; `trainFirstMerge` remains as a Stage 4-compatible wrapper. `challenge-cli/stages/06-learn-successive-merges.json` compares one-, two-, and three-merge runs.
-- Execution path in order: `runTrain` parses a positive `--merges`; `trainMerges` starts from byte IDs; merge index 0 calls `nextMergeStep` with ID 256; the returned IDs become the next iteration's input; subsequent steps use IDs 257, 258, and so on; the final model contains rules in learning order plus the final transformed IDs.
+- Execution path in order: `runTrain` parses a positive `--merges`; `trainMerges` starts from byte IDs; merge index 0 calls `nextMergeStep` with ID 256; the returned IDs become the next iteration's input; subsequent steps use IDs 257, 258, and so on; `trainingResult` retains final transformed IDs while the serialized model contains only rules and fixed metadata.
 - Important invariants: the selected pair always comes from the current sequence; counts are rebuilt on every iteration; rule `i` creates token `256 + i`; a rule may reference only base IDs or earlier learned IDs; replacement remains left-to-right and non-overlapping.
 - Complexity at this stage: for each requested merge, pair counting and replacement scan the current sequence and selection sorts its distinct pairs. For the challenge's small educational inputs, this direct implementation favors clarity over incremental frequency-maintenance complexity.
 
@@ -382,6 +384,55 @@ The one-, two-, and three-merge fixtures form the adversarial set: an implementa
 - Remaining questions: none for Stage 6.
 - AI feedback on gaps: the learner's proposed control flow is the standard clear implementation. The learner reviewed the loop, intermediate sequences, learned-ID assignment, and hierarchical third rule and found them satisfactory.
 - Learner acceptance: accepted after reviewing the implementation and complete three-merge trace.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
+## Stage 7 — Stop training safely
+
+### Contract
+
+- Stage name: Stop training safely
+- New observable behavior: `--merges N` is an upper bound; training succeeds after reaching it or when no pair occurs at least twice. Zero budgets, empty text, and one-byte text are valid.
+- Main concept: exhausting useful work is successful termination, not an algorithm error.
+- Explicit non-goals: saving models, file input, model-based encoding or decoding, and the final structured error vocabulary.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### Assessment before implementation
+
+- Learner decision: keep source Stage 9 as written because the boundary is useful and already appears close to the existing behavior.
+- Existing pieces: the Stage 6 loop already enforces the upper budget, and `selectTopPair` already identifies an empty candidate set or a best count below 2.
+- Missing pieces: `trainMerges` propagated that condition as failure instead of stopping; `runTrain` rejected zero; no black-box cases covered empty input, one-byte input, or oversized budgets.
+
+### What AI implemented
+
+- Important files and symbols: `errNoRepeatedPair` gives the selector's normal exhaustion condition a stable identity; `trainMerges` uses `errors.Is` to break only on that condition; `runTrain` permits explicitly supplied zero while continuing to reject missing or negative budgets. `challenge-cli/stages/07-stop-training-safely.json` covers all source boundaries through canonical model output, while unit tests inspect final IDs.
+- Execution path in order: parse an explicitly supplied nonnegative budget; begin with byte IDs and an empty merge list; attempt iterations up to the budget; if selection reports `errNoRepeatedPair`, break without adding a rule; return every rule actually learned and the current IDs.
+- Important invariants: `len(merges) <= mergeLimit`; no token is invented from a pair occurring once; zero iterations preserve all input IDs; early stopping preserves rules already learned; ordinary exhaustion writes a successful model rather than stderr.
+- Why a sentinel error is used: selection still needs to tell a one-step caller that no merge exists, while the outer trainer needs to recognize that exact condition as a clean stop without swallowing unrelated future errors.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 7 --debug`.
+- Observed result: all 6 cases failed—five with `no pair occurs at least twice` and the zero-budget case with CLI usage.
+- Command or check: after implementation, `./challenge test --stage 7 --previous`.
+- Observed result: all 38 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, 6 from Stage 3, 4 from Stage 4, 3 from Stage 5, 3 from Stage 6, and 6 from Stage 7.
+- What this proves: both stop conditions work, zero and short inputs preserve their IDs, and oversized budgets return only useful rules.
+- What this does not prove: persistence, file I/O, model reuse, the final error contract, or learner understanding after reading the implementation.
+
+### Boundary examples
+
+- `abc --merges 10` learns no rules because every adjacent pair has count 1.
+- `aaaaa --merges 10` learns only `[97,97]`, producing `[256,256,97]`; the remaining pairs each occur once.
+- `banana banana --merges 99` learns four rules and stops at `[259,32,259]` because both remaining adjacent pairs occur once.
+- `abab --merges 0` performs no work and preserves `[97,98,97,98]`.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 7.
+- AI feedback on gaps: the learner correctly recognized that most mechanics were already in place, reviewed the stopping work, and then identified and corrected the boundary between model state and corpus-specific inspection data.
+- Learner acceptance: accepted together with the correction to emit only the canonical three-field model JSON.
 - Engineering status: `verified`
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.

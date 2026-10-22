@@ -8,7 +8,7 @@
       "name": "trains one alternating-pair rule",
       "args": ["train", "--text", "abab", "--merges", "1"],
       "expect": {
-        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 98]], "ids": [256, 256]}},
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 98]]}},
         "stderr": {"mode": "empty"},
         "exit_code": 0
       }
@@ -17,7 +17,7 @@
       "name": "records the selected rule rather than its frequency",
       "args": ["train", "--text", "ababab", "--merges", "1"],
       "expect": {
-        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 98]], "ids": [256, 256, 256]}},
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 98]]}},
         "stderr": {"mode": "empty"},
         "exit_code": 0
       }
@@ -26,7 +26,7 @@
       "name": "learns a repeated same-ID pair",
       "args": ["train", "--text", "zzzzz", "--merges", "1"],
       "expect": {
-        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[122, 122]], "ids": [256, 256, 122]}},
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[122, 122]]}},
         "stderr": {"mode": "empty"},
         "exit_code": 0
       }
@@ -35,7 +35,7 @@
       "name": "learns a rule across separated occurrences",
       "args": ["train", "--text", "abcab", "--merges", "1"],
       "expect": {
-        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 98]], "ids": [256, 99, 256]}},
+        "stdout": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 98]]}},
         "stderr": {"mode": "empty"},
         "exit_code": 0
       }

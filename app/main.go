@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Dispatches byte encoding, base decoding, pair counting, and deterministic successive-merge tokenizer training.
+ * @description Dispatches byte encoding, base decoding, pair counting, and safely terminating deterministic tokenizer training.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -106,15 +106,21 @@ func runTrain(arguments []string, stdout io.Writer) error {
 	if err := flags.Parse(arguments); err != nil {
 		return errors.New("usage: tokenizer train --text TEXT --merges N")
 	}
-	if flags.NArg() != 0 || *mergeLimit < 1 {
+	mergeLimitProvided := false
+	flags.Visit(func(parsedFlag *flag.Flag) {
+		if parsedFlag.Name == "merges" {
+			mergeLimitProvided = true
+		}
+	})
+	if flags.NArg() != 0 || !mergeLimitProvided || *mergeLimit < 0 {
 		return errors.New("usage: tokenizer train --text TEXT --merges N")
 	}
 
-	model, err := trainMerges(*text, *mergeLimit)
+	result, err := trainMerges(*text, *mergeLimit)
 	if err != nil {
 		return err
 	}
-	return json.NewEncoder(stdout).Encode(model)
+	return json.NewEncoder(stdout).Encode(result.model)
 }
 
 func parseIDs(encoded string) ([]int, error) {
@@ -179,11 +185,17 @@ func countAdjacentPairs(ids []int) [][]int {
 
 const baseVocabSize = 256
 
+var errNoRepeatedPair = errors.New("no pair occurs at least twice")
+
 type tokenizerModel struct {
 	Version       int     `json:"version"`
-	Merges        [][]int `json:"merges"`
 	BaseVocabSize int     `json:"base_vocab_size"`
-	IDs           []int   `json:"ids"`
+	Merges        [][]int `json:"merges"`
+}
+
+type trainingResult struct {
+	model tokenizerModel
+	ids   []int
 }
 
 type mergeStep struct {
@@ -194,30 +206,36 @@ type mergeStep struct {
 }
 
 func trainFirstMerge(text string) (tokenizerModel, error) {
-	return trainMerges(text, 1)
+	result, err := trainMerges(text, 1)
+	return result.model, err
 }
 
 func firstMergeStep(text string) (mergeStep, error) {
 	return nextMergeStep(encodeBytes(text), baseVocabSize)
 }
 
-func trainMerges(text string, mergeLimit int) (tokenizerModel, error) {
+func trainMerges(text string, mergeLimit int) (trainingResult, error) {
 	ids := encodeBytes(text)
 	merges := make([][]int, 0, mergeLimit)
 	for mergeIndex := 0; mergeIndex < mergeLimit; mergeIndex++ {
 		step, err := nextMergeStep(ids, baseVocabSize+mergeIndex)
+		if errors.Is(err, errNoRepeatedPair) {
+			break
+		}
 		if err != nil {
-			return tokenizerModel{}, err
+			return trainingResult{}, err
 		}
 		merges = append(merges, []int{step.pair.left, step.pair.right})
 		ids = step.ids
 	}
 
-	return tokenizerModel{
-		Version:       1,
-		Merges:        merges,
-		BaseVocabSize: baseVocabSize,
-		IDs:           ids,
+	return trainingResult{
+		model: tokenizerModel{
+			Version:       1,
+			BaseVocabSize: baseVocabSize,
+			Merges:        merges,
+		},
+		ids: ids,
 	}, nil
 }
 
@@ -253,7 +271,7 @@ func selectTopPair(counts map[tokenPair]int) (tokenPair, int, error) {
 	})
 
 	if len(pairs) == 0 || counts[pairs[0]] < 2 {
-		return tokenPair{}, 0, errors.New("no pair occurs at least twice")
+		return tokenPair{}, 0, errNoRepeatedPair
 	}
 	selected := pairs[0]
 	return selected, counts[selected], nil

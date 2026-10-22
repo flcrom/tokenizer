@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "stage": 7,
+  "slug": "stop-training-safely",
+  "title": "Stop training safely",
+  "cases": [
+    {
+      "name": "stops when no pair repeats",
+      "args": ["train", "--text", "abc", "--merges", "10"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [], "base_vocab_size": 256}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "allows a zero merge budget",
+      "args": ["train", "--text", "abab", "--merges", "0"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [], "base_vocab_size": 256}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "keeps empty input empty",
+      "args": ["train", "--text", "", "--merges", "5"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [], "base_vocab_size": 256}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "keeps one-byte input unchanged",
+      "args": ["train", "--text", "A", "--merges", "5"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [], "base_vocab_size": 256}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "stops after one useful repeated-byte merge",
+      "args": ["train", "--text", "aaaaa", "--merges", "10"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 97]], "base_vocab_size": 256}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "stops the banana model after four useful merges",
+      "args": ["train", "--text", "banana banana", "--merges", "99"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 110], [98, 256], [256, 97], [257, 258]], "base_vocab_size": 256}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    }
+  ]
+}
