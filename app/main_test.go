@@ -113,6 +113,46 @@ func TestReplacePair(t *testing.T) {
 	}
 }
 
+func TestSelectTopPair(t *testing.T) {
+	tests := []struct {
+		name      string
+		counts    map[tokenPair]int
+		wantPair  tokenPair
+		wantCount int
+	}{
+		{
+			name:      "highest frequency",
+			counts:    map[tokenPair]int{{97, 98}: 3, {98, 97}: 2},
+			wantPair:  tokenPair{97, 98},
+			wantCount: 3,
+		},
+		{
+			name:      "smaller left ID breaks tie",
+			counts:    map[tokenPair]int{{98, 97}: 2, {97, 122}: 2},
+			wantPair:  tokenPair{97, 122},
+			wantCount: 2,
+		},
+		{
+			name:      "smaller right ID breaks tie after left",
+			counts:    map[tokenPair]int{{97, 99}: 2, {97, 98}: 2},
+			wantPair:  tokenPair{97, 98},
+			wantCount: 2,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gotPair, gotCount, err := selectTopPair(test.counts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if gotPair != test.wantPair || gotCount != test.wantCount {
+				t.Fatalf("selectTopPair(%v) = (%v, %d), want (%v, %d)", test.counts, gotPair, gotCount, test.wantPair, test.wantCount)
+			}
+		})
+	}
+}
+
 func TestFirstMergeStep(t *testing.T) {
 	tests := []struct {
 		text string

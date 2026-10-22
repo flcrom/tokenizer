@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Dispatches byte encoding, base decoding, pair counting, and first-merge tokenizer training.
+ * @description Dispatches byte encoding, base decoding, pair counting, and deterministic first-merge tokenizer training.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -209,7 +209,7 @@ func trainFirstMerge(text string) (tokenizerModel, error) {
 
 func firstMergeStep(text string) (mergeStep, error) {
 	ids := encodeBytes(text)
-	pair, count, err := selectUniqueTopPair(pairFrequencies(ids))
+	pair, count, err := selectTopPair(pairFrequencies(ids))
 	if err != nil {
 		return mergeStep{}, err
 	}
@@ -224,28 +224,28 @@ func firstMergeStep(text string) (mergeStep, error) {
 	}, nil
 }
 
-func selectUniqueTopPair(counts map[tokenPair]int) (tokenPair, int, error) {
-	var selected tokenPair
-	selectedCount := 0
-	tied := false
-	for pair, count := range counts {
-		switch {
-		case count > selectedCount:
-			selected = pair
-			selectedCount = count
-			tied = false
-		case count == selectedCount:
-			tied = true
-		}
+func selectTopPair(counts map[tokenPair]int) (tokenPair, int, error) {
+	pairs := make([]tokenPair, 0, len(counts))
+	for pair := range counts {
+		pairs = append(pairs, pair)
 	}
+	sort.Slice(pairs, func(first, second int) bool {
+		firstCount := counts[pairs[first]]
+		secondCount := counts[pairs[second]]
+		if firstCount != secondCount {
+			return firstCount > secondCount
+		}
+		if pairs[first].left != pairs[second].left {
+			return pairs[first].left < pairs[second].left
+		}
+		return pairs[first].right < pairs[second].right
+	})
 
-	if selectedCount < 2 {
+	if len(pairs) == 0 || counts[pairs[0]] < 2 {
 		return tokenPair{}, 0, errors.New("no pair occurs at least twice")
 	}
-	if tied {
-		return tokenPair{}, 0, errors.New("most-frequent pair is tied")
-	}
-	return selected, selectedCount, nil
+	selected := pairs[0]
+	return selected, counts[selected], nil
 }
 
 func replacePair(ids []int, pair tokenPair, newID int) []int {

@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches base-token operations, pair diagnostics, and first-merge tokenizer training with model fields and post-merge IDs. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base-token operations, pair counting, selection, non-overlapping replacement, and the first-merge model. | Application entry point | — |
+| `app/main.go` | Dispatches base-token operations, pair diagnostics, and deterministic first-merge training with model fields and post-merge IDs. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base-token operations, pair counting, deterministic winner selection, non-overlapping replacement, and the first-merge model. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -76,12 +76,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; redesigned Stage 4 first-merge training is engineering-verified and learner-accepted, and revised Stage 5 tied-frequency selection is next.
-- Completed: accepted and checkpointed Stages 1–3; accepted Stage 4 `train --text --merges 1` implementation; version, merge rule, base vocabulary size, and post-merge ID output; unique top-pair selection; non-overlapping replacement; unit tests; and 26 cumulative black-box cases.
-- Not completed: curated Stage 4 checkpoint, deterministic tied-frequency implementation, repeated training, or later tokenizer stages.
+- Phase: 5 in progress; Stages 1–4 are accepted and checkpointed, revised Stage 5 tied-frequency selection is learner-accepted, and repeated training from source Stage 8 is next.
+- Completed: accepted and checkpointed Stages 1–4; accepted Stage 5 frequency-descending, left-ascending, right-ascending selection; non-overlapping replacement; focused unit tests; and 29 cumulative black-box cases.
+- Not completed: curated Stage 5 checkpoint, repeated training, or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next action: checkpoint accepted Stage 4, then implement revised Stage 5 by ordering candidates by frequency descending, left ID ascending, and right ID ascending.
+- Next action: checkpoint accepted Stage 5, then audit and implement the source's Stage 8 repeated-training contract as the next revised stage.
 
 ## Durable decisions
 
@@ -128,3 +128,7 @@ Original Stage 4 remains independent as revised Stage 3 because it introduces an
 ### 2026-10-22 — Use the final-shaped training interface for revised Stage 4
 
 Original Stage 5 is removed as a public challenge stage: caller-directed replacement is an implementation helper, not a useful tokenizer interface. Original Stage 6 becomes revised Stage 4. Its learner-facing command is renamed from the temporary `merge-top` to `train --text TEXT --merges 1`, while retaining an inspectable result: version, the one ordered merge rule, fixed 256-byte base vocabulary size, and post-replacement IDs. The merge count is a user-supplied training-iteration budget that this stage restricts to one. Original Stage 7 is retained next to extend winner selection to tied frequencies.
+
+### 2026-10-22 — Order tied pair candidates deterministically in revised Stage 5
+
+Original Stage 7 becomes revised Stage 5. Winner selection sorts candidate pairs by frequency descending, then left ID ascending, then right ID ascending, and chooses the first candidate. This directly expresses the course rule, removes Go map iteration order from the result, and can be reused during every iteration when repeated training is introduced. The stage still requires the winning frequency to be at least two and still permits only one requested merge.

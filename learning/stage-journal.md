@@ -281,6 +281,56 @@ AI clarification: the four counted windows are four overlapping occurrences of t
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 5 — Resolve tied pair frequencies
+
+### Contract
+
+- Stage name: Resolve tied pair frequencies
+- New observable behavior: `train --text TEXT --merges 1` succeeds when several pairs share the highest frequency and selects the deterministic course-defined winner.
+- Main concept: compare candidates by frequency descending, left ID ascending, then right ID ascending.
+- Explicit non-goals: more than one merge, safe early stopping, persistence, and model-based encoding or decoding.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My prediction before implementation
+
+Learner proposal, preserved from the stage discussion:
+
+> sorting the id pairs in desc with respect to the freq and then asc with resp to left and then asc with resp to right, that way the top most element will always be the merge we are looking for and it will help us to do multiple merges in the next stages
+
+- Expected intermediate states: pair-frequency map → sorted candidate pairs → first candidate → non-overlapping replacement.
+- Why: the first sort key chooses a most-frequent pair, while the next two keys resolve equal frequencies without depending on Go's randomized map iteration order.
+
+### What AI implemented
+
+- Important files and symbols: `selectTopPair` in `app/main.go` copies map keys into a slice and sorts them with the three-level comparator. `TestSelectTopPair` separately covers an ordinary winner, a tied left-ID decision, and a tied right-ID decision. `challenge-cli/stages/05-resolve-tied-pairs.json` adds three process-level cases.
+- Execution path in order: Stage 4's training path is unchanged until `firstMergeStep` calls `selectTopPair`; selection sorts all distinct candidates, checks that the first candidate occurs at least twice, and returns it with its frequency; training then assigns ID 256, replaces matches, and emits the existing result shape.
+- Important invariants: higher frequency always outranks token IDs; left ID is consulted only when frequencies tie; right ID is consulted only when both frequency and left ID tie; map iteration order cannot change the winner; a pair occurring only once is still not learnable.
+- Why this structure helps later: repeated training can recount after every replacement and call the same deterministic selector without changing the comparison rule.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 5 --debug`.
+- Observed result: both tied cases failed with `most-frequent pair is tied`, while the unique-winner regression passed.
+- Command or check: after implementation, `./challenge test --stage 5 --previous`.
+- Observed result: all 29 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, 6 from Stage 3, 4 from Stage 4, and 3 from Stage 5.
+- What this proves: tied winners are resolved by the specified numeric ordering and the existing unique-winner path still works.
+- What this does not prove: repeated merges, safe stopping, persistence, or learner understanding after reading the implementation.
+
+### Adversarial cases
+
+- `bacbac` ties `(98,97)` and `(97,99)` at frequency 2. The smaller left ID selects `(97,99)`, producing `[98,256,98,256]`.
+- `abacabac` ties `(97,98)`, `(98,97)`, and `(97,99)` at frequency 2. Left ID 97 eliminates `(98,97)`; right ID 98 then wins over 99, producing `[256,97,99,256,97,99]`.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 5.
+- AI feedback on gaps: the proposed ordering is correct and naturally reusable. The learner reviewed the comparator and tied examples and confirmed that they match the intended priority.
+- Learner acceptance: accepted after reviewing the comparator and both tie-breaking examples.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
 ## Stage template
 
 ### Contract
