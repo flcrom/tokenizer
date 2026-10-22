@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "base_vocab_size": 256,
+  "merges": [
+    [97, 98]
+  ]
+}

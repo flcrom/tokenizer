@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Dispatches byte encoding with optional model loading, base decoding, pair counting, and deterministic tokenizer training with persistence.
+ * @description Dispatches byte and hierarchical learned-rule encoding, base decoding, pair counting, and deterministic tokenizer training with persistence.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -68,9 +68,11 @@ func runEncode(arguments []string, stdout io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if len(model.Merges) != 0 {
-			return errors.New("encoding with learned merges is not supported yet")
+		ids, err := encodeWithModel(*text, model)
+		if err != nil {
+			return err
 		}
+		return json.NewEncoder(stdout).Encode(ids)
 	}
 
 	return json.NewEncoder(stdout).Encode(encodeBytes(*text))
@@ -261,6 +263,18 @@ func loadModel(path string) (tokenizerModel, error) {
 		return tokenizerModel{}, fmt.Errorf("parse --model: %w", err)
 	}
 	return model, nil
+}
+
+func encodeWithModel(text string, model tokenizerModel) ([]int, error) {
+	ids := encodeBytes(text)
+	for mergeIndex, encodedPair := range model.Merges {
+		if len(encodedPair) != 2 {
+			return nil, fmt.Errorf("model merge %d must contain exactly two token IDs", mergeIndex)
+		}
+		pair := tokenPair{left: encodedPair[0], right: encodedPair[1]}
+		ids = replacePair(ids, pair, model.BaseVocabSize+mergeIndex)
+	}
+	return ids, nil
 }
 
 type mergeStep struct {

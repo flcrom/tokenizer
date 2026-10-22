@@ -538,6 +538,61 @@ The premise needs one correction: the learned model does not replace UTF-8. Text
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 10 — Encode with learned merge rules
+
+### Contract
+
+- Stage name: Encode with learned merge rules
+- New observable behavior: `encode --model PATH --text TEXT` handles zero, one, multiple, or hierarchical ordered merge rules.
+- Main concept: inference follows saved rule rank; it neither recounts frequencies nor reprioritizes rules for new input.
+- Explicit non-goals: learned-token decoding and complete model validation.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My prediction before implementation
+
+Learner proposal, preserved from the stage discussion:
+
+> we are taking the merges array from the model.json. we will iterate on that merges array and also start another index from 256, for each new merge pair, we will increment this index. for each merge we will find if there are any pairs in the input text ids and if there are any, we will merge them and also maintain a new ids array as we do this, next new merge is applied on this new array
+
+- Correct algorithmic direction: text first becomes byte IDs; learned ID `i` is `base_vocab_size + i`; replacement builds a new ID array; a later rule must inspect the array produced by earlier rules.
+- Revised scope: source Stages 12–14 are merged. Separate cases preserve zero-rule and one-rule observations, then introduce saved-rank priority and finally prove that later rules can consume IDs created by earlier rules.
+
+### What AI implemented
+
+- Important files and symbols: `encodeWithModel` iterates every saved rule, reuses `replacePair`, and assigns `base_vocab_size + merge index`. The example folders provide one-rule, priority, reversed-priority, and hierarchical banana models. `challenge-cli/stages/10-apply-learned-model.json` defines the merged black-box contract.
+- Execution path in order: parse flags → load model JSON → convert new text to UTF-8 byte IDs → visit merges in saved order → assign the learned ID from the rule index → replace all non-overlapping matches into a new array → pass that array to the next rule → print the final IDs.
+- Important invariants: zero rules preserve byte IDs; one occurrence is enough; matches do not overlap; unmatched IDs keep their order; model position—not new-input frequency—sets priority; learned IDs increase from `base_vocab_size`; later rules see and may consume learned IDs created by earlier rules; the model is read-only.
+- Reused mechanism: training and inference both use `replacePair`, but training selects a pair from corpus frequencies whereas inference receives the pair from the saved model.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 10 --debug`.
+- Observed result: the original five one-rule cases failed because Stage 9 deliberately rejected nonempty merge lists. After one-rule support, the newly added multiple-rule cases failed because multiple merges were deliberately rejected.
+- Command or check: after implementation, `./challenge test --stage 10 --previous`.
+- Observed result: all 61 cumulative black-box executions passed. Revised Stage 10 separately covers zero rules, five one-rule boundaries, saved-order and reversed priority, plus three hierarchical-token inputs.
+- Command or check: `./your_program.sh encode --model examples/stage-12/model.json --text 'zab!ab'`.
+- Observed result: `[122,256,33,256]`.
+- What this proves: empty models preserve bytes; saved pairs are reused even once; rules follow model order rather than new-input frequency; later rules consume earlier learned IDs across multiple levels; and the model remains unchanged.
+- What this does not prove: decoding learned IDs or semantic validation of every model field.
+
+### Trace and adversarial case
+
+The one-rule model has `merges: [[97,98]]`, so rule index 0 creates ID `256`. For `zab!ab`, base IDs `[122,97,98,33,97,98]` become `[122,256,33,256]`. For `aaa` with rule `[97,97]`, the first two IDs are consumed together and the scan advances by two, producing `[256,97]` rather than overlapping outputs.
+
+The priority model has `[[97,98],[98,99]]`. In `abc bc bc`, `[98,99]` initially occurs three times while `[97,98]` occurs once. Rule 0 still merges `[97,98]` first into ID 256; rule 1 then merges the two remaining `[98,99]` occurrences into ID 257, yielding `[256,99,32,257,32,257]`. Reversing the model rules yields `[97,256,32,256,32,256]`, proving that inference does not train again.
+
+The hierarchical banana model has `[[97,110],[98,256],[256,97]]`. Rule 0 creates token 256 for `an`; rule 1 consumes 256 to create token 257 for `ban`; rule 2 consumes 256 to create token 258 for `ana`. Therefore `banana!` progresses through `[98,256,256,97,33]`, `[257,256,97,33]`, and finally `[257,258,33]`.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 10.
+- AI feedback on gaps: the learner identified that training already refreshed IDs and produced hierarchical rules, correctly recognizing that the proposed inference restriction was artificial. The learner requested its removal and accepted the combined encoding boundary before proceeding to decoding.
+- Learner acceptance: accepted after reviewing the hierarchical trace and consolidating source Stages 12–14 into one complete encoding stage.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
 ## Stage template
 
 ### Contract

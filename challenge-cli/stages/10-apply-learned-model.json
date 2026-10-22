@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "stage": 10,
+  "slug": "apply-learned-model",
+  "title": "Encode with learned merge rules",
+  "cases": [
+    {
+      "name": "keeps byte IDs with zero learned pairs",
+      "args": ["encode", "--model", "model.json", "--text", "abc"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [97, 98, 99]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "applies one learned pair throughout new text",
+      "args": ["encode", "--model", "model.json", "--text", "zab!ab"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,98]]}\n"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [122, 256, 33, 256]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      },
+      "expected_files": [
+        {"path": "model.json", "content": {"mode": "exact_text", "text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,98]]}\n"}}
+      ]
+    },
+    {
+      "name": "applies a learned pair that occurs once",
+      "args": ["encode", "--model", "model.json", "--text", "ab"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,98]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [256]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "preserves bytes not covered by the rule",
+      "args": ["encode", "--model", "model.json", "--text", "z!"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,98]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [122, 33]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "keeps empty input empty",
+      "args": ["encode", "--model", "model.json", "--text", ""],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,98]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": []},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "replaces matching pairs without overlap",
+      "args": ["encode", "--model", "model.json", "--text", "aaa"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,97]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [256, 97]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "uses saved priority instead of new-text frequency",
+      "args": ["encode", "--model", "model.json", "--text", "abc bc bc"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,98],[98,99]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [256, 99, 32, 257, 32, 257]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      },
+      "repeat": 3
+    },
+    {
+      "name": "reversing saved priority changes the encoding",
+      "args": ["encode", "--model", "model.json", "--text", "abc bc bc"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[98,99],[97,98]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [97, 256, 32, 256, 32, 256]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "applies two hierarchical levels",
+      "args": ["encode", "--model", "model.json", "--text", "bana ana ana"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,110],[98,256],[256,97]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [257, 97, 32, 258, 32, 258]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "encodes hierarchical banana tokens",
+      "args": ["encode", "--model", "model.json", "--text", "banana!"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,110],[98,256],[256,97]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [257, 258, 33]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "reuses hierarchical tokens throughout text",
+      "args": ["encode", "--model", "model.json", "--text", "banana banana"],
+      "files": [
+        {"path": "model.json", "content": {"text": "{\"version\":1,\"base_vocab_size\":256,\"merges\":[[97,110],[98,256],[256,97]]}"}}
+      ],
+      "expect": {
+        "stdout": {"mode": "json", "json": [257, 258, 32, 257, 258]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    }
+  ]
+}

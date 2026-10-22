@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies base-token round trips, model loading, pair counting, replacement, deterministic training, safe stopping, and raw corpus-byte handling.
+ * @description Verifies base and hierarchical learned-rule encoding, model loading, pair operations, deterministic training, and raw corpus-byte handling.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -288,5 +288,91 @@ func TestLoadModel(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("loadModel(%q) = %#v, want %#v", path, got, want)
+	}
+}
+
+func TestEncodeWithOneLearnedPair(t *testing.T) {
+	model := tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{{97, 98}}}
+	tests := []struct {
+		name string
+		text string
+		want []int
+	}{
+		{name: "pair throughout new text", text: "zab!ab", want: []int{122, 256, 33, 256}},
+		{name: "pair occurs once", text: "ab", want: []int{256}},
+		{name: "uncovered bytes", text: "z!", want: []int{122, 33}},
+		{name: "empty", text: "", want: []int{}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := encodeWithModel(test.text, model)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("encodeWithModel(%q) = %v, want %v", test.text, got, test.want)
+			}
+		})
+	}
+}
+
+func TestEncodeWithOneLearnedPairDoesNotOverlap(t *testing.T) {
+	model := tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{{97, 97}}}
+	got, err := encodeWithModel("aaa", model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []int{256, 97}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("encodeWithModel(%q) = %v, want %v", "aaa", got, want)
+	}
+}
+
+func TestEncodeWithMultipleBasePairsUsesModelOrder(t *testing.T) {
+	model := tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{{97, 98}, {98, 99}}}
+	got, err := encodeWithModel("abc bc bc", model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []int{256, 99, 32, 257, 32, 257}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("encodeWithModel() = %v, want %v", got, want)
+	}
+
+	reversed := tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{{98, 99}, {97, 98}}}
+	got, err = encodeWithModel("abc bc bc", reversed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = []int{97, 256, 32, 256, 32, 256}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("encodeWithModel() with reversed rules = %v, want %v", got, want)
+	}
+}
+
+func TestEncodeWithModelAppliesHierarchicalPairs(t *testing.T) {
+	model := tokenizerModel{
+		Version:       1,
+		BaseVocabSize: 256,
+		Merges:        [][]int{{97, 110}, {98, 256}, {256, 97}},
+	}
+	tests := []struct {
+		text string
+		want []int
+	}{
+		{text: "bana ana ana", want: []int{257, 97, 32, 258, 32, 258}},
+		{text: "banana!", want: []int{257, 258, 33}},
+		{text: "banana banana", want: []int{257, 258, 32, 257, 258}},
+	}
+
+	for _, test := range tests {
+		got, err := encodeWithModel(test.text, model)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, test.want) {
+			t.Fatalf("encodeWithModel(%q) = %v, want %v", test.text, got, test.want)
+		}
 	}
 }
