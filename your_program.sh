@@ -10,11 +10,13 @@ project_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 invocation_dir=$(pwd)
 binary_dir="$project_root/.local/bin"
 binary_path="$binary_dir/tokenizer"
+go_cache="$project_root/.local/go-build"
+go_module_cache="$project_root/.local/go-mod"
 
-mkdir -p "$binary_dir"
+mkdir -p "$binary_dir" "$go_cache" "$go_module_cache"
 (
   cd "$project_root"
-  go build -o "$binary_path" ./app
+  GOCACHE="${GOCACHE:-$go_cache}" GOMODCACHE="${GOMODCACHE:-$go_module_cache}" go build -o "$binary_path" ./app
 )
 
 cd "$invocation_dir"

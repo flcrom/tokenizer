@@ -9,9 +9,9 @@
 
 ## Status
 
-`waiting_for_foundations`
+`in_progress`
 
-The source document presents a 16-stage byte-level BPE challenge. A high-level orientation is now recorded in `docs/source-orientation.md`, but the individual stage boundaries have not been accepted, rejected, or reviewed. The audit waits until the learner has enough tokenizer foundations to participate meaningfully.
+The source document presents a 16-stage byte-level BPE challenge. The foundations and high-level orientation are complete, so stages are now reviewed immediately before implementation. The table below records decisions cumulatively rather than approving all 16 boundaries in advance.
 
 ## Who answers the questions?
 
@@ -57,5 +57,5 @@ Populate this only after the high-level source orientation.
 
 | Original stage | Capability | Main concept | Load | Decision | Rationale / replacement |
 | --- | --- | --- | --- | --- | --- |
-| Pending | Pending | Pending | Pending | Pending | Pending |
+| 1 — Encode ASCII text | `encode --text` emits one integer ID per ASCII byte | A token ID can name a byte | Small core conversion plus first end-to-end CLI integration | `keep` — accepted | The conversion is only a few lines, but the stage establishes the command-line input, flag parsing, transformation, JSON output, launcher, and black-box contract together. The learner found that sufficient for a first stage. ASCII keeps the byte/character distinction out of scope until Stage 2. |
 
