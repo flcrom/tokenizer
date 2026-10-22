@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies base-token encoding, decoding, and UTF-8 round trips independently of the process harness.
+ * @description Verifies base-token round trips and adjacent-pair counting independently of the process harness.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -64,5 +64,27 @@ func TestBaseTokenRoundTrip(t *testing.T) {
 		if !bytes.Equal(decoded, []byte(fixture)) {
 			t.Fatalf("round trip for %q produced %v", fixture, decoded)
 		}
+	}
+}
+
+func TestCountAdjacentPairs(t *testing.T) {
+	tests := []struct {
+		name string
+		ids  []int
+		want [][]int
+	}{
+		{name: "repeated pairs", ids: []int{97, 98, 97, 98}, want: [][]int{{97, 98, 2}, {98, 97, 1}}},
+		{name: "overlapping windows", ids: []int{7, 7, 7, 7}, want: [][]int{{7, 7, 3}}},
+		{name: "numeric pair order", ids: []int{256, 97, 256, 97}, want: [][]int{{97, 256, 1}, {256, 97, 2}}},
+		{name: "empty", ids: []int{}, want: [][]int{}},
+		{name: "one ID", ids: []int{42}, want: [][]int{}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := countAdjacentPairs(test.ids); !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("countAdjacentPairs(%v) = %v, want %v", test.ids, got, test.want)
+			}
+		})
 	}
 }

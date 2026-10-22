@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "stage": 3,
+  "slug": "count-adjacent-pairs",
+  "title": "Count adjacent pairs",
+  "cases": [
+    {
+      "name": "counts repeated adjacent pairs",
+      "args": ["pairs", "--ids", "[97,98,97,98]"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [[97, 98, 2], [98, 97, 1]]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "counts overlapping windows",
+      "args": ["pairs", "--ids", "[97,97,97]"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [[97, 97, 2]]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "counts tied pair frequencies",
+      "args": ["pairs", "--ids", "[1,2,1,2,1]"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [[1, 2, 2], [2, 1, 2]]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "sorts numerically by pair rather than frequency",
+      "args": ["pairs", "--ids", "[256,97,256,97]"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [[97, 256, 1], [256, 97, 2]]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "returns no pairs for empty input",
+      "args": ["pairs", "--ids", "[]"],
+      "expect": {
+        "stdout": {"mode": "json", "json": []},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "returns no pairs for one ID",
+      "args": ["pairs", "--ids", "[42]"],
+      "expect": {
+        "stdout": {"mode": "json", "json": []},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    }
+  ]
+}
