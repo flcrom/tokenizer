@@ -1,7 +1,7 @@
 <!--
 @file README.md
 @description Introduces the tokenizer learning project, its present boundary, navigation, and immediate next step.
-@depends_on MEMORY.md, plan.md, docs/README.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/source-orientation.md, docs/tokenizer-foundations.md, docs/research-plan.md, docs/harness-architecture.md, docs/version-control.md, challenge-cli/README.md, learning/mental-model.md
+@depends_on MEMORY.md, plan.md, docs/README.md, docs/build-your-own-tokenizer.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/source-orientation.md, docs/tokenizer-foundations.md, docs/research-plan.md, docs/harness-architecture.md, docs/version-control.md, challenge-cli/README.md, learning/mental-model.md
 @depended_on_by none
 -->
 
@@ -15,12 +15,13 @@ The learner does not need to type every line. The non-negotiable requirement is 
 
 The repository has completed the workspace, source-orientation, foundations, stack/harness decisions, and all twelve revised implementation stages. Revised Stage 12 keeps source Stage 16 intact: it validates every external boundary and emits one structured error contract. All revised stages are engineering-verified, learner-reviewed, accepted, and checkpointed.
 
-The next step is integrated validation and final challenge documentation: demonstrate the complete tokenizer, measure its practical boundary, and turn the implemented journey into a standalone Markdown challenge document.
+The standalone Markdown challenge is drafted. The next step is learner review for length, clarity, and teaching value, followed by integrated validation and any resulting documentation revision.
 
 ## Where to start
 
 - [plan.md](plan.md) defines the outcomes, phases, and explicit non-goals.
 - [docs/README.md](docs/README.md) explains what each document is for, who contributes to it, and when it is used.
+- [docs/build-your-own-tokenizer.md](docs/build-your-own-tokenizer.md) is the standalone final 12-stage challenge specification.
 - [docs/source-orientation.md](docs/source-orientation.md) gives the high-level reading of the supplied challenge.
 - [docs/tokenizer-foundations.md](docs/tokenizer-foundations.md) begins the plain-language tokenizer lesson and gives a curated learning sequence.
 - [docs/stage-workflow.md](docs/stage-workflow.md) defines how every later challenge stage moves from prediction to engineering evidence to learning sign-off.

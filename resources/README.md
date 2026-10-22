@@ -2,7 +2,7 @@
 @file resources/README.md
 @description Inventories external and handed-over tokenizer resources while preserving their provenance and review status.
 @depends_on resources/sources.md
-@depended_on_by docs/challenge-audit.md, docs/research-plan.md, docs/source-orientation.md
+@depended_on_by docs/build-your-own-tokenizer.md, docs/challenge-audit.md, docs/research-plan.md, docs/source-orientation.md
 -->
 
 # Resources

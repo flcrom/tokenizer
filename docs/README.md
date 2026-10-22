@@ -1,7 +1,7 @@
 <!--
 @file docs/README.md
 @description Explains the purpose, ownership, and timing of each focused project document.
-@depends_on plan.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/source-orientation.md, docs/tokenizer-foundations.md, docs/research-plan.md, docs/harness-architecture.md, docs/version-control.md
+@depends_on plan.md, docs/build-your-own-tokenizer.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/source-orientation.md, docs/tokenizer-foundations.md, docs/research-plan.md, docs/harness-architecture.md, docs/version-control.md
 @depended_on_by README.md
 -->
 
@@ -11,6 +11,7 @@ The files in this folder are working agreements and reasoning records. They do n
 
 | Document | What it defines | Who contributes | When it is used |
 | --- | --- | --- | --- |
+| `build-your-own-tokenizer.md` | The standalone final 12-stage challenge: shared contracts, stage instructions, examples, tests, scope, and source-to-final mapping. | AI drafts from verified implementation evidence; learner reviews clarity, size, and teaching value. | Phase 7 and whenever the challenge is handed to another learner or reviewer. |
 | `source-orientation.md` | A high-level reading of what the supplied challenge proposes. | AI drafts from the source; learner asks questions and corrects interpretations. | Phase 1, before detailed tokenizer study or stage verdicts. |
 | `tokenizer-foundations.md` | The initial mental model, vocabulary, project context, and learning sequence. | AI teaches and sources; learner builds and revises their own model. | Phase 2, before the stage audit. |
 | `research-plan.md` | The questions our foundations work must eventually answer and the standard for sources. | AI curates; learner decides where more depth is needed. | Phase 2 and whenever a knowledge gap appears. |

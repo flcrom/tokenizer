@@ -2,7 +2,7 @@
 @file docs/version-control.md
 @description Defines the Git branch roles and cumulative CodeCrafters-style commit policy for verified stages.
 @depends_on plan.md
-@depended_on_by README.md, docs/README.md, docs/harness-architecture.md
+@depended_on_by README.md, docs/README.md, docs/build-your-own-tokenizer.md, docs/harness-architecture.md
 -->
 
 # Version-control strategy

@@ -2,7 +2,7 @@
 @file resources/sources.md
 @description Tracks candidate tokenizer learning sources, provenance, purpose, and review state.
 @depends_on none
-@depended_on_by resources/README.md, docs/tokenizer-foundations.md
+@depended_on_by resources/README.md, docs/build-your-own-tokenizer.md, docs/tokenizer-foundations.md
 -->
 
 # Curated sources

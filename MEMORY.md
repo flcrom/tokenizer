@@ -65,6 +65,7 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `examples/stage-14/model.json` | Provides the three-rule banana model for hierarchical inference examples. | — | — |
 | `challenge-cli/README.md` | Explains local challenge commands, boundaries, and verification. | Challenge module, entry point, manifest guide, launcher | Root README, harness architecture |
 | `docs/README.md` | Explains the purpose, ownership, and timing of project documentation. | Plan and all focused docs | Root README |
+| `docs/build-your-own-tokenizer.md` | Defines the standalone final 12-stage challenge, examples, tests, scope, and redesign mapping. | Plan, challenge audit, harness architecture, version control, resource index, source list | Root README, docs index |
 | `docs/stage-workflow.md` | Defines the repeatable review-build-understand-accept loop. | Plan, collaboration guide, challenge audit, stage journal | Root README, docs index, harness architecture |
 | `docs/challenge-audit.md` | Holds the structured evaluation of the handed-over challenge. | Plan, resource index, source orientation | Root README, docs index, stage workflow |
 | `docs/source-orientation.md` | Explains the supplied challenge at a high level before stage evaluation. | Resource index | Root README, docs index, challenge audit, tokenizer foundations |
@@ -81,11 +82,11 @@ Before changing files, identify the smallest change set, inspect direct dependen
 ## Current state
 
 - Phase: 5 complete; all twelve revised implementation stages are accepted and checkpointed, and integrated validation plus final challenge documentation are next.
-- Completed: accepted and checkpointed Stages 1–12; four-code structured failures; CLI, I/O, strict model-graph, and unknown-token validation; focused unit tests; and 92 cumulative black-box executions.
-- Not completed: Phase 6 integrated validation, practical performance evidence on a modest corpus, or the final standalone Markdown challenge document and retrospective.
+- Completed: accepted and checkpointed Stages 1–12; four-code structured failures; CLI, I/O, strict model-graph, and unknown-token validation; focused unit tests; 92 cumulative black-box executions; and a complete first draft of the standalone 12-stage Markdown challenge.
+- Not completed: learner review and acceptance of the final challenge draft, Phase 6 integrated validation, practical performance evidence on a modest corpus, or the final retrospective.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: agree on the high-level structure of the final Markdown challenge document before drafting it.
+- Next discussion: review the standalone challenge draft for length, clarity, stage detail, and teaching value before accepting or revising it.
 
 ## Durable decisions
 
@@ -172,3 +173,7 @@ Original Stage 16 provisionally becomes revised Stage 12 without an advance spli
 ### 2026-10-23 — Keep and accept source Stage 16 as revised Stage 12
 
 After reviewing the verified implementation and its measured diff, the learner kept source Stage 16 whole. The production code changed by 177 additions and 47 deletions; most remaining repository churn came from the 25-case black-box manifest, focused tests, and documentation. The learner accepted the stage as one coherent final validation boundary, completing Phase 5 with all twelve revised stages checkpointed.
+
+### 2026-10-23 — Keep the final challenge language-agnostic
+
+The standalone challenge specifies observable commands, byte behavior, model semantics, tests, and learning goals without prescribing an implementation language. `your_program.sh` is the language adapter, and each starter may compile or invoke its chosen language behind that stable process boundary. This repository's Go implementation is evidence that the contract works, not a requirement imposed on future learners.

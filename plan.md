@@ -2,7 +2,7 @@
 @file plan.md
 @description Defines the tokenizer project's learning outcomes, phased path, scope boundaries, and completion standards.
 @depends_on collaboration-guide.md
-@depended_on_by AGENTS.md, MEMORY.md, README.md, docs/README.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/research-plan.md, docs/harness-architecture.md, docs/version-control.md, learning/mental-model.md, learning/stage-journal.md
+@depended_on_by AGENTS.md, MEMORY.md, README.md, docs/README.md, docs/build-your-own-tokenizer.md, docs/stage-workflow.md, docs/challenge-audit.md, docs/research-plan.md, docs/harness-architecture.md, docs/version-control.md, learning/mental-model.md, learning/stage-journal.md
 -->
 
 # Tokenizer project plan

@@ -2,7 +2,7 @@
 @file docs/challenge-audit.md
 @description Provides the rubric and workspace for evaluating and revising the handed-over tokenizer challenge.
 @depends_on plan.md, resources/README.md, docs/source-orientation.md
-@depended_on_by README.md, docs/README.md, docs/stage-workflow.md
+@depended_on_by README.md, docs/README.md, docs/build-your-own-tokenizer.md, docs/stage-workflow.md
 -->
 
 # Challenge audit

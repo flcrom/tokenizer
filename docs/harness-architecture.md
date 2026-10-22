@@ -2,7 +2,7 @@
 @file docs/harness-architecture.md
 @description Defines the approved Go starter, black-box challenge CLI, stage manifest, verification, and Git checkpoint architecture.
 @depends_on plan.md, docs/stage-workflow.md, docs/version-control.md, challenge-cli/README.md, your_program.sh
-@depended_on_by README.md, docs/README.md
+@depended_on_by README.md, docs/README.md, docs/build-your-own-tokenizer.md
 -->
 
 # Harness architecture
