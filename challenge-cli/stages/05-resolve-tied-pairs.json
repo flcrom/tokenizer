@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "stage": 5,
+  "slug": "resolve-tied-pairs",
+  "title": "Resolve tied pair frequencies",
+  "cases": [
+    {
+      "name": "prioritizes the smaller left ID",
+      "args": ["train", "--text", "bacbac", "--merges", "1"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 99]], "base_vocab_size": 256, "ids": [98, 256, 98, 256]}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "prioritizes the smaller right ID after the left ID",
+      "args": ["train", "--text", "abacabac", "--merges", "1"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 98]], "base_vocab_size": 256, "ids": [256, 97, 99, 256, 97, 99]}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "still selects a unique most-frequent pair",
+      "args": ["train", "--text", "ababab", "--merges", "1"],
+      "expect": {
+        "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 98]], "base_vocab_size": 256, "ids": [256, 256, 256]}},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    }
+  ]
+}
