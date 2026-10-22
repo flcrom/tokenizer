@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches base-token operations, pair diagnostics, text/file training, safe termination, and optional canonical model persistence. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base-token operations, deterministic training, safe stopping, internal transformed IDs, and arbitrary corpus bytes. | Application entry point | — |
+| `app/main.go` | Dispatches base-token operations with optional model loading, pair diagnostics, text/file training, safe termination, and canonical persistence. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base-token operations, model loading, deterministic training, safe stopping, internal transformed IDs, and arbitrary corpus bytes. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -76,12 +76,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; Stages 1–7 are accepted and checkpointed, revised Stage 8 raw-file training and model persistence are learner-accepted, and source Stage 11 model loading is next.
-- Completed: accepted and checkpointed Stages 1–7; accepted Stage 8 `--input` and `--output`; byte-identical stdout/file model serialization; newline and arbitrary-byte corpus preservation; focused unit tests; and 43 cumulative black-box cases.
-- Not completed: curated Stage 8 checkpoint, model loading, learned-model encoding, or later tokenizer stages.
+- Phase: 5 in progress; revised Stages 1–8 are accepted and checkpointed, and revised Stage 9 empty-model loading is engineering-verified and learner-accepted.
+- Completed: accepted and checkpointed Stages 1–8; accepted Stage 9 empty-model loading; focused unit tests; and 48 cumulative black-box cases.
+- Not completed: curated checkpoint for Stage 9, learned-model encoding, model-based decoding, full model validation, or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: checkpoint Stage 8, then understand source Stage 11's model-loading boundary before deciding its revised contract.
+- Next discussion: checkpoint revised Stage 9, then implement source Stage 12's one-learned-pair inference boundary as revised Stage 10.
 
 ## Durable decisions
 
@@ -148,3 +148,7 @@ Training stdout and future `model.json` files contain exactly the document's req
 ### 2026-10-22 — Keep raw-file training and persistence as revised Stage 8
 
 Original Stage 10 becomes revised Stage 8. `train` accepts exactly one corpus source: explicit `--text` or `--input PATH`. File input is read as raw bytes without trimming, line splitting, or UTF-8 interpretation and feeds the existing trainer through `trainBytes`. The canonical model is serialized once with a newline; when `--output PATH` is supplied, those same bytes are written to the file before stdout, preventing the saved and printed models from drifting. Model JSON parsing remains the next loading stage rather than part of persistence.
+
+### 2026-10-22 — Isolate empty-model loading as revised Stage 9
+
+Original Stage 11 becomes revised Stage 9. `encode --model PATH --text TEXT` reads and JSON-decodes a canonical model in a fresh process. Empty models preserve base UTF-8 byte IDs, which isolates persistence and parsing from the separate learned-rule application algorithm in original Stage 12. The implementation rejects nonempty merge lists rather than silently ignoring them. Missing files and malformed JSON fail without stdout; complete semantic validation remains deferred.

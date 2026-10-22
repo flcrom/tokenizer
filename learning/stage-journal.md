@@ -488,6 +488,56 @@ Learner proposal, preserved from the stage discussion:
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 9 — Load an empty model contract
+
+### Contract
+
+- Stage name: Load an empty model contract
+- New observable behavior: `encode --model PATH --text TEXT` reads a canonical model in a fresh process and, for an empty merge list, emits the same base byte IDs as ordinary encoding.
+- Main concept: UTF-8 still turns text into bytes; a learned BPE model is a second layer that may group those byte-token IDs.
+- Explicit non-goals: applying nonempty merge rules, model-based decoding, complete field validation, and the final structured error vocabulary.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### Question before implementation
+
+Learner question, preserved from the stage discussion:
+
+> I am having a hard time to picture what exactly will be happening when we encode something not using utf 8 but a model that we built, right ? we are replacing utf 8 with this now.
+
+The premise needs one correction: the learned model does not replace UTF-8. Text is still converted to UTF-8 bytes first. Those 256 possible byte values are the base token vocabulary. The model's ordered merge rules then optionally replace recurring adjacent token pairs with learned IDs 256, 257, and onward. This stage proves only that the saved model can cross the process boundary; its empty rule list means there is nothing to apply yet.
+
+### What AI implemented
+
+- Important files and symbols: `runEncode` accepts optional `--model`; `loadModel` reads the file with `os.ReadFile` and decodes it with `json.Unmarshal`; `challenge-cli/stages/09-load-model-contract.json` defines five process-level cases; `TestLoadModel` directly checks reordered, whitespace-formatted JSON.
+- Execution path in order: parse `--model` and `--text` → when a model was supplied, read its bytes → parse JSON into `tokenizerModel` → require an empty merge list at this stage → encode the text as its UTF-8 bytes → print the integer IDs as JSON.
+- Important invariants: encoding without a model remains compatible; JSON object key order and formatting cannot affect the parsed model; an unreadable or malformed model produces no token output; a nonempty model is not silently ignored.
+- Why reject nonempty models for now: accepting one while still returning raw byte IDs would falsely imply that the model had been applied. Source Stage 12 adds that separate algorithm.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 9 --debug`.
+- Observed result: the no-model regression passed, while all four model-loading cases failed because `--model` was unknown.
+- Command or check: after implementation, `./challenge test --stage 9 --previous`.
+- Observed result: all 48 cumulative black-box cases passed: 43 from accepted Stages 1–8 and 5 from Stage 9.
+- What this proves: an empty model can be loaded in a fresh process; reordered and whitespace-formatted JSON works; missing and malformed model files fail nonzero; prior behavior remains active.
+- What this does not prove: learned merges affect tokenization, learned IDs can be decoded, model fields are semantically valid, or the learner understands the two-layer representation.
+
+### Example to trace
+
+- Empty Stage 9 model: `"Hi!"` → UTF-8 bytes `[72,105,33]` → apply zero rules → token IDs `[72,105,33]`.
+- Future nonempty model: the ordered rules `[[97,110],[98,256],[256,97]]` assign IDs 256, 257, and 258. `"banana!"` begins as `[98,97,110,97,110,97,33]`, then becomes `[98,256,256,97,33]`, then `[257,256,97,33]`, then `[257,258,33]`.
+- Interpretation: learned ID 257 represents the byte sequence for `ban`, learned ID 258 represents `ana`, and base ID 33 represents `!`. The text is still UTF-8 underneath the learned grouping.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 9.
+- AI feedback on gaps: the learner correctly restated the next inference path: read the ordered merges, derive learned IDs from 256 onward, and apply each rule to the current IDs. The only scope clarification is that source Stage 12 begins with one rule; multiple-rule priority and hierarchical rules remain later stages.
+- Learner acceptance: accepted after distinguishing the UTF-8 base representation from the learned merge layer and asking to proceed to source Stage 12.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
 ## Stage template
 
 ### Contract

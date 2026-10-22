@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Dispatches byte encoding, base decoding, pair counting, and deterministic tokenizer training from text or raw files with optional model persistence.
+ * @description Dispatches byte encoding with optional model loading, base decoding, pair counting, and deterministic tokenizer training with persistence.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -49,11 +49,28 @@ func runEncode(arguments []string, stdout io.Writer) error {
 	// flags for the new "encode" option belong to flags variable
 	flags.SetOutput(io.Discard)
 	text := flags.String("text", "", "UTF-8 text to encode")
+	modelPath := flags.String("model", "", "path to a tokenizer model")
 	if err := flags.Parse(arguments); err != nil {
-		return errors.New("usage: tokenizer encode --text TEXT")
+		return errors.New("usage: tokenizer encode [--model PATH] --text TEXT")
 	}
 	if flags.NArg() != 0 {
-		return errors.New("usage: tokenizer encode --text TEXT")
+		return errors.New("usage: tokenizer encode [--model PATH] --text TEXT")
+	}
+
+	modelProvided := false
+	flags.Visit(func(parsedFlag *flag.Flag) {
+		if parsedFlag.Name == "model" {
+			modelProvided = true
+		}
+	})
+	if modelProvided {
+		model, err := loadModel(*modelPath)
+		if err != nil {
+			return err
+		}
+		if len(model.Merges) != 0 {
+			return errors.New("encoding with learned merges is not supported yet")
+		}
 	}
 
 	return json.NewEncoder(stdout).Encode(encodeBytes(*text))
@@ -231,6 +248,19 @@ type tokenizerModel struct {
 type trainingResult struct {
 	model tokenizerModel
 	ids   []int
+}
+
+func loadModel(path string) (tokenizerModel, error) {
+	encodedModel, err := os.ReadFile(path)
+	if err != nil {
+		return tokenizerModel{}, fmt.Errorf("read --model: %w", err)
+	}
+
+	var model tokenizerModel
+	if err := json.Unmarshal(encodedModel, &model); err != nil {
+		return tokenizerModel{}, fmt.Errorf("parse --model: %w", err)
+	}
+	return model, nil
 }
 
 type mergeStep struct {
