@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches base-token operations with optional model loading, pair diagnostics, text/file training, safe termination, and canonical persistence. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base-token operations, model loading, deterministic training, safe stopping, internal transformed IDs, and arbitrary corpus bytes. | Application entry point | — |
+| `app/main.go` | Dispatches base and hierarchical learned-rule encoding, model loading, pair diagnostics, deterministic training, and persistence. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base and hierarchical learned-rule encoding, model loading, deterministic training, stopping, and arbitrary corpus bytes. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -59,6 +59,10 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `challenge-cli/internal/runner/runner_test.go` | Verifies process, JSON, bytes, files, exits, and timeout behavior. | Runner, stage types, fake program | — |
 | `challenge-cli/testdata/programs/fake_program.sh` | Supplies deterministic behaviors for runner self-tests. | — | Runner tests |
 | `challenge-cli/stages/README.md` | Documents generated stage-manifest structure and supported cases. | Stage types, CLI application | CLI guide |
+| `examples/stage-12/model.json` | Provides a canonical one-rule model for manually exercising source Stage 12. | — | — |
+| `examples/stage-13/priority.json` | Provides a two-rule model demonstrating saved-rank priority. | — | — |
+| `examples/stage-13/reverse-priority.json` | Reverses the same two rules to demonstrate that rank changes encoding. | — | — |
+| `examples/stage-14/model.json` | Provides the three-rule banana model for hierarchical inference examples. | — | — |
 | `challenge-cli/README.md` | Explains local challenge commands, boundaries, and verification. | Challenge module, entry point, manifest guide, launcher | Root README, harness architecture |
 | `docs/README.md` | Explains the purpose, ownership, and timing of project documentation. | Plan and all focused docs | Root README |
 | `docs/stage-workflow.md` | Defines the repeatable review-build-understand-accept loop. | Plan, collaboration guide, challenge audit, stage journal | Root README, docs index, harness architecture |
@@ -76,12 +80,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; revised Stages 1–8 are accepted and checkpointed, and revised Stage 9 empty-model loading is engineering-verified and learner-accepted.
-- Completed: accepted and checkpointed Stages 1–8; accepted Stage 9 empty-model loading; focused unit tests; and 48 cumulative black-box cases.
-- Not completed: curated checkpoint for Stage 9, learned-model encoding, model-based decoding, full model validation, or later tokenizer stages.
+- Phase: 5 in progress; revised Stages 1–9 are accepted and checkpointed, and revised Stage 10 complete learned-model encoding is engineering-verified and learner-accepted.
+- Completed: accepted and checkpointed Stages 1–9; accepted zero-, one-, priority-, and hierarchical-rule inference; ready-to-run example models; focused unit tests; and 61 cumulative black-box executions.
+- Not completed: curated checkpoint for Stage 10, model-based decoding, or full model validation.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: checkpoint revised Stage 9, then implement source Stage 12's one-learned-pair inference boundary as revised Stage 10.
+- Next discussion: checkpoint revised Stage 10, then implement source Stage 15 model-based decoding as revised Stage 11.
 
 ## Durable decisions
 
@@ -152,3 +156,7 @@ Original Stage 10 becomes revised Stage 8. `train` accepts exactly one corpus so
 ### 2026-10-22 — Isolate empty-model loading as revised Stage 9
 
 Original Stage 11 becomes revised Stage 9. `encode --model PATH --text TEXT` reads and JSON-decodes a canonical model in a fresh process. Empty models preserve base UTF-8 byte IDs, which isolates persistence and parsing from the separate learned-rule application algorithm in original Stage 12. The implementation rejects nonempty merge lists rather than silently ignoring them. Missing files and malformed JSON fail without stdout; complete semantic validation remains deferred.
+
+### 2026-10-22 — Merge complete learned-model encoding as revised Stage 10
+
+Original Stages 12–14 become revised Stage 10. Its cases explicitly distinguish zero, one, multiple, and hierarchical rules. Encoding starts from UTF-8 byte IDs and applies rules in saved order, assigning rule `i` learned ID `base_vocab_size + i`; every transformed array feeds the next rule, so later rules can consume earlier learned IDs. Training already created such models and the inference loop already had the required mechanics, making original Stage 14 only an artificial guard plus tests rather than an independent implementation stage.
