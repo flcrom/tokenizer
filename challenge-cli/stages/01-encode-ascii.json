@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "stage": 1,
+  "slug": "encode-ascii",
+  "title": "Encode ASCII text",
+  "cases": [
+    {
+      "name": "encodes one byte",
+      "args": ["encode", "--text", "A"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [65]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "preserves byte order",
+      "args": ["encode", "--text", "hello"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [104, 101, 108, 108, 111]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "preserves spaces",
+      "args": ["encode", "--text", "A A"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [65, 32, 65]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "preserves all ASCII whitespace",
+      "args": ["encode", "--text", " A\t\nA "],
+      "expect": {
+        "stdout": {"mode": "json", "json": [32, 65, 9, 10, 65, 32]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "preserves repeated characters",
+      "args": ["encode", "--text", "aaa"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [97, 97, 97]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "encodes punctuation",
+      "args": ["encode", "--text", "Hi!"],
+      "expect": {
+        "stdout": {"mode": "json", "json": [72, 105, 33]},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "encodes empty text",
+      "args": ["encode", "--text", ""],
+      "expect": {
+        "stdout": {"mode": "json", "json": []},
+        "stderr": {"mode": "empty"},
+        "exit_code": 0
+      }
+    }
+  ]
+}

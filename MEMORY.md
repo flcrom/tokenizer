@@ -44,7 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Provides the compilable pre-stage tokenizer entry point. | — | Program launcher |
+| `app/main.go` | Parses the Stage 1 command and converts text bytes to integer token IDs. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests the Stage 1 byte-to-token conversion. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -75,12 +76,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 4 complete; ready to review the harness and frame Stage 1.
-- Completed: foundations; Go selection; CodeCrafters-style starter; separate local challenge module; stage creation/listing/testing commands; black-box runner self-tests.
-- Not completed: learner review of the harness, any tokenizer stage contract, tokenizer behavior, stage acceptance tests, or stage checkpoint commit.
+- Phase: 5 in progress; Stage 1 is engineering-verified, learning-signed-off, and explicitly accepted.
+- Completed: foundations; Go selection; CodeCrafters-style starter; separate local challenge module; harness review; Stage 1 contract, audit decision, implementation, unit tests, seven black-box acceptance cases including ASCII control whitespace, explanation, adversarial review, and learner acceptance.
+- Not completed: Stage 1 curated Git checkpoint or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next discussion: learner code review of the harness, followed by the Stage 1 contract and its initially failing black-box cases.
+- Next discussion: audit the proposed Stage 2 UTF-8 boundary before implementation.
 
 ## Durable decisions
 
@@ -107,3 +108,7 @@ Updated on 2026-10-22: `main` is the living workspace, while `stages` begins fro
 ### 2026-10-22 — Go application and isolated local challenge harness
 
 The learner application is a root Go module with `app/main.go` and the stable `your_program.sh` interface. The local challenge CLI is a separate Go module that creates strict JSON stage manifests and runs the launcher only as a black-box child process in isolated temporary workspaces. It observes arguments, stdin, stdout, stderr, exit status, time, and declared files; it never imports learner code or manages Git.
+
+### 2026-10-22 — Keep and accept Stage 1 as the first executable slice
+
+Stage 1 remains independent even though byte-to-ID conversion is only a few lines. Its learning boundary includes establishing the first complete command-line path: argument parsing, byte representation, integer token IDs, JSON output, launcher execution, and black-box verification. Engineering passed seven cases, and the learner explained and accepted the stage.
