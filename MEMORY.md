@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches base-token operations, pair diagnostics, and safely terminating deterministic training with canonical model output and internal transformed IDs. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base-token operations, pair counting, deterministic selection, replacement, successive training, and safe stopping. | Application entry point | — |
+| `app/main.go` | Dispatches base-token operations, pair diagnostics, text/file training, safe termination, and optional canonical model persistence. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base-token operations, deterministic training, safe stopping, internal transformed IDs, and arbitrary corpus bytes. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -72,16 +72,16 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `learning/stage-journal.md` | Provides the learner-owned record for predictions, traces, explanations, and sign-off. | Plan, collaboration guide | Stage workflow |
 | `resources/README.md` | Inventories and protects handed-over and collected source material. | Source list | Challenge audit, research plan |
 | `resources/sources.md` | Tracks curated tokenizer learning sources, sequence, purpose, and review state. | — | Resource index, tokenizer foundations |
-| `scripts/check_metadata.py` | Validates metadata presence, paths, and reciprocal edges. | Memory | Agents |
+| `scripts/check_metadata.py` | Validates metadata presence, paths, and reciprocal edges while excluding local corpus/model runtime directories. | Memory | Agents |
 
 ## Current state
 
-- Phase: 5 in progress; Stages 1–6 are accepted and checkpointed, and revised Stage 7 safe stopping plus the canonical model-output correction are learner-accepted.
-- Completed: accepted and checkpointed Stages 1–6; accepted Stage 7 budget and no-repeat stopping; canonical three-field model JSON across training stages; internal transformed-ID traces; focused unit tests; and 38 cumulative black-box cases.
-- Not completed: curated Stage 7 checkpoint, persistence, or later tokenizer stages.
+- Phase: 5 in progress; Stages 1–7 are accepted and checkpointed, revised Stage 8 raw-file training and model persistence are learner-accepted, and source Stage 11 model loading is next.
+- Completed: accepted and checkpointed Stages 1–7; accepted Stage 8 `--input` and `--output`; byte-identical stdout/file model serialization; newline and arbitrary-byte corpus preservation; focused unit tests; and 43 cumulative black-box cases.
+- Not completed: curated Stage 8 checkpoint, model loading, learned-model encoding, or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next action: checkpoint accepted Stage 7 and its canonical model-output correction, then audit persistence from source Stage 10.
+- Next discussion: checkpoint Stage 8, then understand source Stage 11's model-loading boundary before deciding its revised contract.
 
 ## Durable decisions
 
@@ -144,3 +144,7 @@ Original Stage 9 is retained as revised Stage 7. The existing loop already stops
 ### 2026-10-22 — Keep persisted model JSON canonical
 
 Training stdout and future `model.json` files contain exactly the document's required fields: `version`, `base_vocab_size`, and ordered `merges`. The corpus-specific transformed IDs are useful for teaching and tests but are not tokenizer state, so `trainingResult` retains them internally while `tokenizerModel` alone is serialized. Previously published stage tags remain immutable historical checkpoints; current cumulative manifests for Stages 4 onward enforce the canonical contract.
+
+### 2026-10-22 — Keep raw-file training and persistence as revised Stage 8
+
+Original Stage 10 becomes revised Stage 8. `train` accepts exactly one corpus source: explicit `--text` or `--input PATH`. File input is read as raw bytes without trimming, line splitting, or UTF-8 interpretation and feeds the existing trainer through `trainBytes`. The canonical model is serialized once with a newline; when `--output PATH` is supplied, those same bytes are written to the file before stdout, preventing the saved and printed models from drifting. Model JSON parsing remains the next loading stage rather than part of persistence.

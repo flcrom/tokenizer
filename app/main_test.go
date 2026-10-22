@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies base-token round trips, pair counting, replacement, deterministic selection, successive training, and safe stopping independently of the process harness.
+ * @description Verifies base-token round trips, pair counting, replacement, deterministic training, safe stopping, and raw corpus-byte handling independently of the process harness.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -256,5 +256,20 @@ func TestTrainMergesStopsSafely(t *testing.T) {
 				t.Fatalf("trainMerges(%q, %d) = %#v, want %#v", test.text, test.mergeLimit, got, test.want)
 			}
 		})
+	}
+}
+
+func TestTrainBytesPreservesArbitraryCorpusBytes(t *testing.T) {
+	want := trainingResult{
+		model: tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{{255, 0}}},
+		ids:   []int{256, 256},
+	}
+
+	got, err := trainBytes([]byte{255, 0, 255, 0}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("trainBytes() = %#v, want %#v", got, want)
 	}
 }

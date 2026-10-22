@@ -437,6 +437,57 @@ The one-, two-, and three-merge fixtures form the adversarial set: an implementa
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 8 — Train from a file and save the model
+
+### Contract
+
+- Stage name: Train from a file and save the model
+- New observable behavior: `train` accepts raw corpus bytes through `--input PATH` instead of `--text`, and optional `--output PATH` saves the same canonical model printed to stdout.
+- Main concept: training input and learned model output are different file boundaries—the corpus is arbitrary bytes, while the model is canonical JSON.
+- Explicit non-goals: loading a model, encoding with learned rules, model validation, recursive directory creation, and the final structured error vocabulary.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My prediction before implementation
+
+Learner proposal, preserved from the stage discussion:
+
+> I think we need to just include logic to read from a file and the rest mostly stays the same, we maybe dont have to do the json parsing now since we are reading directly from the doucment
+
+- Correct part: once corpus bytes are obtained, pair counting, deterministic selection, repeated merging, safe stopping, and model construction stay unchanged.
+- Clarification: `--input` names the raw training corpus rather than a JSON document, so no JSON parsing is needed for input. JSON serialization is still required to print and optionally save `model.json`; JSON parsing begins when a later stage loads that model.
+
+### What AI implemented
+
+- Important files and symbols: `runTrain` tracks whether `--text`, `--input`, `--output`, and `--merges` were explicitly supplied; `os.ReadFile` loads the complete corpus; `trainBytes` trains directly on `[]byte`; `json.Marshal` produces the canonical model once; `os.WriteFile` persists those bytes. `challenge-cli/stages/08-save-trained-model.json` supplies isolated corpus files and inspects generated models.
+- Execution path in order: parse flags → require exactly one corpus source and a nonnegative merge budget → read raw file bytes or convert explicit text to bytes → call `trainBytes` → marshal only `tokenizerModel` → optionally write the encoded model → write the same bytes to stdout.
+- Important invariants: text and file input with identical bytes learn identical rules; no newline is trimmed; arbitrary bytes remain unsigned IDs 0–255; stdout and `--output` cannot differ because both receive the same `encodedModel` byte slice; corpus-specific transformed IDs are never persisted.
+- Language mechanics: Go strings can contain arbitrary bytes, but a direct `[]byte` trainer makes the file contract explicit. `flag.FlagSet.Visit` distinguishes an explicitly supplied empty `--text ''` from a missing `--text` flag.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 8 --debug`.
+- Observed result: the existing `--text` case passed; all four file-related cases failed with CLI usage because `--input` and `--output` were unknown.
+- Command or check: after implementation, `./challenge test --stage 8 --previous`.
+- Observed result: all 43 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, 6 from Stage 3, 4 from Stage 4, 3 from Stage 5, 3 from Stage 6, 6 from Stage 7, and 5 from Stage 8.
+- What this proves: file and text corpus sources agree, model persistence matches stdout structurally, newline bytes survive, arbitrary bytes reach training unchanged, and prior stages still pass.
+- What this does not prove: model loading, behavior in a fresh encoding process, complete I/O error classification, or learner understanding after reading the implementation.
+
+### Adversarial cases
+
+- `a\na\n` learns `[97,10]`; trimming or line scanning would change or eliminate that rule.
+- Raw bytes `FF 00 FF 00` learn `[255,0]`; text-only or UTF-8-decoding input code would corrupt or reject this corpus.
+- `banana banana` through `--text` and `--input` must produce the same three-rule canonical model.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 8.
+- AI feedback on gaps: the proposed reuse of training logic was correct. The learner reviewed the corpus-source validation, raw byte path, and shared stdout/file serialization and found them satisfactory.
+- Learner acceptance: accepted after reviewing file input, canonical model output, and the distinction between corpus bytes and model JSON.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-22.
+
 ## Stage template
 
 ### Contract

@@ -27,6 +27,7 @@ IGNORED_DIRECTORIES = {
     "vendor",
 }
 IGNORED_FILENAMES = {".DS_Store", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
+IGNORED_RELATIVE_DIRECTORIES = {Path("app/input"), Path("app/output")}
 IGNORED_SUFFIXES = {
     ".avif",
     ".gif",
@@ -55,6 +56,8 @@ def candidate_files() -> list[Path]:
             continue
         relative = path.relative_to(ROOT)
         if any(part in IGNORED_DIRECTORIES for part in relative.parts):
+            continue
+        if any(relative == directory or directory in relative.parents for directory in IGNORED_RELATIVE_DIRECTORIES):
             continue
         if path.name in IGNORED_FILENAMES or path.suffix.lower() in IGNORED_SUFFIXES:
             continue

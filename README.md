@@ -13,9 +13,9 @@ The learner does not need to type every line. The non-negotiable requirement is 
 
 ## Current boundary
 
-The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Stages 1–6 are accepted and checkpointed. Revised Stage 7 safely stops at the merge budget or when no repeated pair remains; it and the canonical model-output correction are engineering-verified and learner-accepted.
+The repository has completed the workspace, source-orientation, foundations, and stack/harness decisions. Go is the selected language, and the local black-box challenge harness is implemented. Stages 1–7 are accepted and checkpointed. Revised Stage 8 trains from raw corpus files and optionally saves the canonical model; it is engineering-verified and learner-accepted.
 
-The next step is to checkpoint Stage 7, then audit model persistence from source Stage 10.
+The next step is to checkpoint Stage 8, then understand and audit source Stage 11's model-loading boundary.
 
 ## Where to start
 

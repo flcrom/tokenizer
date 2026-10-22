@@ -66,6 +66,7 @@ Populate this only after the high-level source orientation.
 | 7 — Resolve tied frequencies | Extend winner selection when multiple pairs share the highest frequency | Training needs a deterministic tie rule | Focused extension to selection semantics | `keep` as revised Stage 5 | Stage 5 sorts by frequency descending, left ID ascending, then right ID ascending. Focused cases separately prove left-ID priority and right-ID priority while retaining a unique-winner regression. |
 | 8 — Learn successive merges | Permit positive `--merges N`, recount after every replacement, and let later rules reference learned IDs | Each merge changes the next frequency table | Substantial but cohesive loop over the established primitives | `keep` as revised Stage 6 | Reuse deterministic selection and replacement in a loop. Compare one-, two-, and three-merge runs on the same text so stale frequency tables and incorrect learned IDs are observable. |
 | 9 — Stop training safely | Treat `N` as an upper bound; stop when the best count is below 2; support zero, empty, and one-byte inputs | Normal termination is distinct from failure | Small implementation delta but essential algorithmic contract | `keep` as revised Stage 7 | The loop and minimum-frequency detection already exist, but Stage 7 turns the latter into successful completion and verifies every boundary from the source document. |
+| 10 — Save a trained model | Add raw `--input PATH` as an alternative corpus source and optional `--output PATH` persistence | A learned model is portable data; corpus bytes must remain unchanged | Moderate I/O boundary around stable training logic | `keep` as revised Stage 8 | Read the corpus with `os.ReadFile`, train through the byte-oriented core, serialize the canonical model once, and write the same JSON bytes to the file and stdout. |
 
 ## Revised Stage 4 contract
 
@@ -84,6 +85,10 @@ The command and output shape remain `train --text TEXT --merges 1`. When several
 ## Revised Stage 7 contract
 
 `--merges N` is now an upper bound and may be zero. Training stops successfully after `N` rules or as soon as there is no pair with count at least 2. Empty input, one-byte input, and input with only unique adjacent pairs return a canonical model with an empty merge array; their unchanged IDs remain internal. A large budget may therefore produce fewer rules than requested. Missing or negative budgets remain invalid, while the final structured error contract remains deferred.
+
+## Revised Stage 8 contract
+
+`train` requires exactly one corpus source: `--text TEXT` or `--input PATH`. `--input` reads every file byte unchanged, including newlines and bytes that are not valid UTF-8. Training otherwise reuses the existing merge budget and stopping behavior. Stdout always prints the canonical model JSON; optional `--output PATH` writes the same serialized bytes to disk. JSON parsing is not needed yet because this stage creates a model—loading and validating model JSON begins with the source's Stage 11.
 
 ## Cross-language evidence for the Stage 2 decision
 
