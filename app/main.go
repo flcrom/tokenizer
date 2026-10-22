@@ -1,6 +1,6 @@
 /**
  * @file app/main.go
- * @description Dispatches byte and hierarchical learned-rule encoding, base decoding, pair counting, and deterministic tokenizer training with persistence.
+ * @description Dispatches learned-model encoding and decoding, pair diagnostics, and deterministic tokenizer training with persistence.
  * @depends_on none
  * @depended_on_by your_program.sh, app/main_test.go
  */
@@ -82,16 +82,36 @@ func runDecode(arguments []string, stdout io.Writer) error {
 	flags := flag.NewFlagSet("decode", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	encodedIDs := flags.String("ids", "", "JSON array of base token IDs")
+	modelPath := flags.String("model", "", "path to a tokenizer model")
 	if err := flags.Parse(arguments); err != nil {
-		return errors.New("usage: tokenizer decode --ids JSON")
+		return errors.New("usage: tokenizer decode [--model PATH] --ids JSON")
 	}
 	if flags.NArg() != 0 {
-		return errors.New("usage: tokenizer decode --ids JSON")
+		return errors.New("usage: tokenizer decode [--model PATH] --ids JSON")
 	}
 
 	ids, err := parseIDs(*encodedIDs)
 	if err != nil {
 		return fmt.Errorf("parse --ids: %w", err)
+	}
+
+	modelProvided := false
+	flags.Visit(func(parsedFlag *flag.Flag) {
+		if parsedFlag.Name == "model" {
+			modelProvided = true
+		}
+	})
+	if modelProvided {
+		model, err := loadModel(*modelPath)
+		if err != nil {
+			return err
+		}
+		decoded, err := decodeWithModel(ids, model)
+		if err != nil {
+			return err
+		}
+		_, err = stdout.Write(decoded)
+		return err
 	}
 
 	_, err = stdout.Write(decodeBaseIDs(ids))
@@ -275,6 +295,46 @@ func encodeWithModel(text string, model tokenizerModel) ([]int, error) {
 		ids = replacePair(ids, pair, model.BaseVocabSize+mergeIndex)
 	}
 	return ids, nil
+}
+
+func buildTokenExpansions(model tokenizerModel) ([][]byte, error) {
+	expansions := make([][]byte, model.BaseVocabSize+len(model.Merges))
+	for id := 0; id < model.BaseVocabSize; id++ {
+		expansions[id] = []byte{byte(id)}
+	}
+
+	for mergeIndex, encodedPair := range model.Merges {
+		if len(encodedPair) != 2 {
+			return nil, fmt.Errorf("model merge %d must contain exactly two token IDs", mergeIndex)
+		}
+		newID := model.BaseVocabSize + mergeIndex
+		left, right := encodedPair[0], encodedPair[1]
+		if left < 0 || left >= newID || right < 0 || right >= newID {
+			return nil, fmt.Errorf("model merge %d references an unavailable token ID", mergeIndex)
+		}
+
+		expansion := make([]byte, 0, len(expansions[left])+len(expansions[right]))
+		expansion = append(expansion, expansions[left]...)
+		expansion = append(expansion, expansions[right]...)
+		expansions[newID] = expansion
+	}
+	return expansions, nil
+}
+
+func decodeWithModel(ids []int, model tokenizerModel) ([]byte, error) {
+	expansions, err := buildTokenExpansions(model)
+	if err != nil {
+		return nil, err
+	}
+
+	decoded := make([]byte, 0)
+	for _, id := range ids {
+		if id < 0 || id >= len(expansions) {
+			return nil, fmt.Errorf("unknown token ID %d", id)
+		}
+		decoded = append(decoded, expansions[id]...)
+	}
+	return decoded, nil
 }
 
 type mergeStep struct {

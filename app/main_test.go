@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies base and hierarchical learned-rule encoding, model loading, pair operations, deterministic training, and raw corpus-byte handling.
+ * @description Verifies learned-model encoding and decoding, model loading, pair operations, deterministic training, and raw byte preservation.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -374,5 +374,46 @@ func TestEncodeWithModelAppliesHierarchicalPairs(t *testing.T) {
 		if !reflect.DeepEqual(got, test.want) {
 			t.Fatalf("encodeWithModel(%q) = %v, want %v", test.text, got, test.want)
 		}
+	}
+}
+
+func TestDecodeWithModelExpandsLearnedTokens(t *testing.T) {
+	model := tokenizerModel{
+		Version:       1,
+		BaseVocabSize: 256,
+		Merges:        [][]int{{97, 110}, {98, 256}, {256, 97}},
+	}
+	tests := []struct {
+		name string
+		ids  []int
+		want []byte
+	}{
+		{name: "hierarchical tokens", ids: []int{257, 258, 33}, want: []byte("banana!")},
+		{name: "base and learned tokens", ids: []int{257, 97, 32, 258}, want: []byte("bana ana")},
+		{name: "empty", ids: []int{}, want: []byte{}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := decodeWithModel(test.ids, model)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, test.want) {
+				t.Fatalf("decodeWithModel(%v) = %v, want %v", test.ids, got, test.want)
+			}
+		})
+	}
+}
+
+func TestDecodeWithModelPreservesRawBytes(t *testing.T) {
+	model := tokenizerModel{Version: 1, BaseVocabSize: 256, Merges: [][]int{{169, 195}}}
+	got, err := decodeWithModel([]int{256}, model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []byte{169, 195}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("decodeWithModel([256]) = %v, want %v", got, want)
 	}
 }

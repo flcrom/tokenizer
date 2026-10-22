@@ -593,6 +593,58 @@ The hierarchical banana model has `[[97,110],[98,256],[256,97]]`. Rule 0 creates
 - Learning status: `signed_off`
 - Date signed off: 2026-10-22.
 
+## Stage 11 — Decode learned tokens
+
+### Contract
+
+- Stage name: Decode learned tokens
+- New observable behavior: `decode --model PATH --ids JSON` expands base and learned token IDs through the saved model and writes their exact bytes.
+- Main concept: a learned token's meaning is the recursively composed byte sequence of its two operands.
+- Explicit non-goals: the final structured error vocabulary and complete model validation.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+
+### My prediction before implementation
+
+Learner proposal, preserved from the stage discussion:
+
+> there is an encoded id array we are given and we have to decode this and we have to find the decoded ids, i think we will also iterate over all the merge rules from model.json file in this too, probably from the bottom this time, and for every merge rule, we will expand the merge into the pair, the index decrements from base + merge array size to lower as we expand the merges
+
+- Correct mechanism: replacing learned IDs from the highest rule back toward the base vocabulary eventually leaves only byte IDs.
+- Index correction: with `N` merges, the highest learned ID is `base_vocab_size + N - 1`; `base_vocab_size + N` is one past the vocabulary.
+- Implementation choice: build every token's complete byte expansion once in forward merge order, then concatenate the requested expansions. This is equivalent for a valid model but avoids repeatedly rewriting the input sequence.
+
+### What AI implemented
+
+- Important files and symbols: `runDecode` accepts optional `--model`; `buildTokenExpansions` constructs the token-to-byte table; `decodeWithModel` concatenates requested expansions; `challenge-cli/stages/11-decode-learned-tokens.json` defines six process-level cases.
+- Execution path in order: parse the JSON IDs → load model JSON → initialize base token expansions as one byte each → visit merges in order → concatenate each pair's existing expansions into the next learned ID → concatenate the expansions for the requested IDs → write the resulting byte slice directly to stdout.
+- Important invariants: learned ID `base_vocab_size + i` is built only from earlier expansions; input token order is preserved; base and learned IDs may mix; no newline is added; token fragments are bytes rather than independently decoded characters.
+- Safety before final validation: malformed pair widths, unavailable rule operands, and requested IDs outside the constructed vocabulary return errors rather than panicking. Source Stage 16 will assign the final error objects and validate the entire model contract consistently.
+
+### Evidence
+
+- Command or check: before implementation, `./challenge test --stage 11 --debug`.
+- Observed result: all six cases failed at CLI parsing because `decode` did not accept `--model`.
+- Command or check: after implementation, `./challenge test --stage 11 --previous`.
+- Observed result: all 67 cumulative black-box executions passed, including six new model-decoding cases.
+- What this proves: hierarchical and mixed token IDs decode correctly; raw invalid-UTF-8 token fragments are preserved; complete multibyte output is reconstructed; and unseen emoji plus multilingual base bytes remain exact.
+- What this does not prove: final error classification, rejection of every invalid model shape, duplicate-rule validation, or learner understanding after reading the code.
+
+### Trace and adversarial case
+
+For the banana model, expansions are built as `256 = [97,110]`, `257 = [98] + expansion[256] = [98,97,110]`, and `258 = expansion[256] + [97] = [97,110,97]`. Requested IDs `[257,258,33]` concatenate to `[98,97,110,97,110,97,33]`, which stdout writes as `banana!`.
+
+The adversarial model `[[169,195]]` makes token 256 expand to bytes `[169,195]`, which is not valid UTF-8 by itself. Nevertheless, requested IDs `[195,256,169]` concatenate to `[195,169,195,169]`, the valid UTF-8 bytes for `éé`. Converting each token to text separately would corrupt this result.
+
+### Questions and sign-off
+
+- Remaining questions: none for Stage 11.
+- AI feedback on gaps: the learner proposed the correct reverse-expansion model, understood the highest learned-ID boundary after correction, reviewed the forward expansion-table implementation, and approved the raw-byte decoding behavior.
+- Learner acceptance: reviewed and marked LGTM before moving to the final validation stage.
+- Engineering status: `verified`
+- Learning status: `signed_off`
+- Date signed off: 2026-10-23.
+
 ## Stage template
 
 ### Contract
