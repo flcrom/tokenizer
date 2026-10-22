@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches base-token operations, pair diagnostics, and deterministic successive-merge training with model fields and post-merge IDs. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base-token operations, pair counting, deterministic winner selection, non-overlapping replacement, and successive training. | Application entry point | — |
+| `app/main.go` | Dispatches base-token operations, pair diagnostics, and safely terminating deterministic training with canonical model output and internal transformed IDs. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base-token operations, pair counting, deterministic selection, replacement, successive training, and safe stopping. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -76,12 +76,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; Stages 1–5 are accepted and checkpointed, revised Stage 6 successive-merge training is learner-accepted, and safe stopping from source Stage 9 is next.
-- Completed: accepted and checkpointed Stages 1–5; accepted Stage 6 repeated recount-select-replace training; learned IDs 256 onward; hierarchical learned rules; focused unit tests; and 32 cumulative black-box cases.
-- Not completed: curated Stage 6 checkpoint, safe early stopping, or later tokenizer stages.
+- Phase: 5 in progress; Stages 1–6 are accepted and checkpointed, and revised Stage 7 safe stopping plus the canonical model-output correction are learner-accepted.
+- Completed: accepted and checkpointed Stages 1–6; accepted Stage 7 budget and no-repeat stopping; canonical three-field model JSON across training stages; internal transformed-ID traces; focused unit tests; and 38 cumulative black-box cases.
+- Not completed: curated Stage 7 checkpoint, persistence, or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next action: checkpoint accepted Stage 6, then keep and implement source Stage 9 safe stopping as revised Stage 7.
+- Next action: checkpoint accepted Stage 7 and its canonical model-output correction, then audit persistence from source Stage 10.
 
 ## Durable decisions
 
@@ -127,7 +127,7 @@ Original Stage 4 remains independent as revised Stage 3 because it introduces an
 
 ### 2026-10-22 — Use the final-shaped training interface for revised Stage 4
 
-Original Stage 5 is removed as a public challenge stage: caller-directed replacement is an implementation helper, not a useful tokenizer interface. Original Stage 6 becomes revised Stage 4. Its learner-facing command is renamed from the temporary `merge-top` to `train --text TEXT --merges 1`, while retaining an inspectable result: version, the one ordered merge rule, fixed 256-byte base vocabulary size, and post-replacement IDs. The merge count is a user-supplied training-iteration budget that this stage restricts to one. Original Stage 7 is retained next to extend winner selection to tied frequencies.
+Original Stage 5 is removed as a public challenge stage: caller-directed replacement is an implementation helper, not a useful tokenizer interface. Original Stage 6 becomes revised Stage 4. Its learner-facing command is renamed from the temporary `merge-top` to `train --text TEXT --merges 1`. The public JSON uses the canonical version, base vocabulary size, and ordered merge list, while focused tests retain the post-replacement IDs internally. The merge count is a user-supplied training-iteration budget that this stage restricts to one. Original Stage 7 is retained next to extend winner selection to tied frequencies.
 
 ### 2026-10-22 — Order tied pair candidates deterministically in revised Stage 5
 
@@ -136,3 +136,11 @@ Original Stage 7 becomes revised Stage 5. Winner selection sorts candidate pairs
 ### 2026-10-22 — Recount after every merge in revised Stage 6
 
 Original Stage 8 becomes revised Stage 6. For each positive requested merge, training counts the current IDs, applies the deterministic selector, assigns ID `256 + merge index`, replaces all non-overlapping matches, appends the rule, and repeats using the transformed IDs. The pair ordering from the previous iteration is never reused because every replacement changes adjacency. This stage uses inputs with enough repeated pairs to satisfy the requested count; safe early stopping, zero merges, and short inputs remain original Stage 9's boundary.
+
+### 2026-10-22 — Keep safe stopping as revised Stage 7
+
+Original Stage 9 is retained as revised Stage 7. The existing loop already stops at its merge budget, and selection already detects when no pair occurs twice; the stage changes that detection from an error into successful early completion. It also permits an explicitly supplied zero budget and naturally returns empty merge lists for empty or one-byte input. Missing or negative merge budgets still fail. Final transformed IDs remain internal inspection data rather than persisted model fields.
+
+### 2026-10-22 — Keep persisted model JSON canonical
+
+Training stdout and future `model.json` files contain exactly the document's required fields: `version`, `base_vocab_size`, and ordered `merges`. The corpus-specific transformed IDs are useful for teaching and tests but are not tokenizer state, so `trainingResult` retains them internally while `tokenizerModel` alone is serialized. Previously published stage tags remain immutable historical checkpoints; current cumulative manifests for Stages 4 onward enforce the canonical contract.
