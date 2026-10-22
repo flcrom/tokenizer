@@ -44,8 +44,8 @@ Before changing files, identify the smallest change set, inspect direct dependen
 | `plan.md` | Defines outcomes, boundaries, phases, and completion criteria. | Collaboration guide | Memory, agents, root README, focused docs, learning records |
 | `collaboration-guide.md` | Defines teaching, implementation, explanation, and visual practices. | — | Memory, agents, plan, workflow, research plan, learning records |
 | `go.mod` | Declares the standalone learner-application Go module. | — | Program launcher |
-| `app/main.go` | Dispatches base-token operations, pair diagnostics, and deterministic first-merge training with model fields and post-merge IDs. | — | Program launcher, application tests |
-| `app/main_test.go` | Unit-tests base-token operations, pair counting, deterministic winner selection, non-overlapping replacement, and the first-merge model. | Application entry point | — |
+| `app/main.go` | Dispatches base-token operations, pair diagnostics, and deterministic successive-merge training with model fields and post-merge IDs. | — | Program launcher, application tests |
+| `app/main_test.go` | Unit-tests base-token operations, pair counting, deterministic winner selection, non-overlapping replacement, and successive training. | Application entry point | — |
 | `your_program.sh` | Compiles and executes the learner program through a stable process boundary. | Application module and entry point | Runner, CLI guide, harness architecture |
 | `challenge` | Runs the isolated challenge CLI from the repository root. | Challenge module and entry point | — |
 | `challenge-cli/go.mod` | Declares the isolated local challenge Go module. | — | Challenge wrapper, entry point, CLI guide |
@@ -76,12 +76,12 @@ Before changing files, identify the smallest change set, inspect direct dependen
 
 ## Current state
 
-- Phase: 5 in progress; Stages 1–4 are accepted and checkpointed, revised Stage 5 tied-frequency selection is learner-accepted, and repeated training from source Stage 8 is next.
-- Completed: accepted and checkpointed Stages 1–4; accepted Stage 5 frequency-descending, left-ascending, right-ascending selection; non-overlapping replacement; focused unit tests; and 29 cumulative black-box cases.
-- Not completed: curated Stage 5 checkpoint, repeated training, or later tokenizer stages.
+- Phase: 5 in progress; Stages 1–5 are accepted and checkpointed, revised Stage 6 successive-merge training is learner-accepted, and safe stopping from source Stage 9 is next.
+- Completed: accepted and checkpointed Stages 1–5; accepted Stage 6 repeated recount-select-replace training; learned IDs 256 onward; hierarchical learned rules; focused unit tests; and 32 cumulative black-box cases.
+- Not completed: curated Stage 6 checkpoint, safe early stopping, or later tokenizer stages.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
-- Next action: checkpoint accepted Stage 5, then audit and implement the source's Stage 8 repeated-training contract as the next revised stage.
+- Next action: checkpoint accepted Stage 6, then keep and implement source Stage 9 safe stopping as revised Stage 7.
 
 ## Durable decisions
 
@@ -132,3 +132,7 @@ Original Stage 5 is removed as a public challenge stage: caller-directed replace
 ### 2026-10-22 — Order tied pair candidates deterministically in revised Stage 5
 
 Original Stage 7 becomes revised Stage 5. Winner selection sorts candidate pairs by frequency descending, then left ID ascending, then right ID ascending, and chooses the first candidate. This directly expresses the course rule, removes Go map iteration order from the result, and can be reused during every iteration when repeated training is introduced. The stage still requires the winning frequency to be at least two and still permits only one requested merge.
+
+### 2026-10-22 — Recount after every merge in revised Stage 6
+
+Original Stage 8 becomes revised Stage 6. For each positive requested merge, training counts the current IDs, applies the deterministic selector, assigns ID `256 + merge index`, replaces all non-overlapping matches, appends the rule, and repeats using the transformed IDs. The pair ordering from the previous iteration is never reused because every replacement changes adjacency. This stage uses inputs with enough repeated pairs to satisfy the requested count; safe early stopping, zero merges, and short inputs remain original Stage 9's boundary.

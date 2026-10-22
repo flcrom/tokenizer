@@ -1,6 +1,6 @@
 /**
  * @file app/main_test.go
- * @description Verifies base-token round trips, pair counting, replacement, and first-merge training independently of the process harness.
+ * @description Verifies base-token round trips, pair counting, replacement, deterministic selection, and successive-merge training independently of the process harness.
  * @depends_on app/main.go
  * @depended_on_by none
  */
@@ -189,5 +189,22 @@ func TestTrainFirstMerge(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("trainFirstMerge(%q) = %#v, want %#v", "ababab", got, want)
+	}
+}
+
+func TestTrainMerges(t *testing.T) {
+	want := tokenizerModel{
+		Version:       1,
+		Merges:        [][]int{{97, 110}, {98, 256}, {256, 97}},
+		BaseVocabSize: 256,
+		IDs:           []int{257, 258, 32, 257, 258},
+	}
+
+	got, err := trainMerges("banana banana", 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("trainMerges(%q, %d) = %#v, want %#v", "banana banana", 3, got, want)
 	}
 }
