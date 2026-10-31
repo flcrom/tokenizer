@@ -28,7 +28,7 @@
         "exit_code": 0
       },
       "expected_files": [
-        {"path": "model.json", "content": {"mode": "json", "json": {"version": 1, "base_vocab_size": 256, "merges": [[97, 110], [98, 256], [256, 97]]}}}
+        {"path": "model.json", "same_as": "stdout"}
       ]
     },
     {

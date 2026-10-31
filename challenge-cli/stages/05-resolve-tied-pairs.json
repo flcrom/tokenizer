@@ -7,6 +7,7 @@
     {
       "name": "prioritizes the smaller left ID",
       "args": ["train", "--text", "bacbac", "--merges", "1"],
+      "repeat": 3,
       "expect": {
         "stdout": {"mode": "json", "json": {"version": 1, "merges": [[97, 99]], "base_vocab_size": 256}},
         "stderr": {"mode": "empty"},

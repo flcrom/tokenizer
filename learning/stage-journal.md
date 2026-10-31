@@ -318,6 +318,7 @@ Learner proposal, preserved from the stage discussion:
 - Observed result: all 29 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, 6 from Stage 3, 4 from Stage 4, and 3 from Stage 5.
 - What this proves: tied winners are resolved by the specified numeric ordering and the existing unique-winner path still works.
 - What this does not prove: repeated merges, safe stopping, persistence, or learner understanding after reading the implementation.
+- Post-review strengthening: the left-ID tie case now runs in three fresh processes. This verifies that a learner implementation cannot pass merely because unordered map iteration happened to select the required pair once.
 
 ### Adversarial cases
 
@@ -470,8 +471,9 @@ Learner proposal, preserved from the stage discussion:
 - Observed result: the existing `--text` case passed; all four file-related cases failed with CLI usage because `--input` and `--output` were unknown.
 - Command or check: after implementation, `./challenge test --stage 8 --previous`.
 - Observed result: all 43 cumulative black-box cases passed: 7 from Stage 1, 9 from Stage 2, 6 from Stage 3, 4 from Stage 4, 3 from Stage 5, 3 from Stage 6, 6 from Stage 7, and 5 from Stage 8.
-- What this proves: file and text corpus sources agree, model persistence matches stdout structurally, newline bytes survive, arbitrary bytes reach training unchanged, and prior stages still pass.
+- What this proves: file and text corpus sources agree, model persistence matches stdout byte-for-byte, newline bytes survive, arbitrary bytes reach training unchanged, and prior stages still pass.
 - What this does not prove: model loading, behavior in a fresh encoding process, complete I/O error classification, or learner understanding after reading the implementation.
+- Post-review strengthening: the Stage 8 manifest now compares the saved model bytes directly with stdout from the same invocation. The implementation already serialized once and reused those bytes; the harness previously parsed both outputs independently as JSON and therefore did not prove the exact-byte promise.
 
 ### Adversarial cases
 
@@ -650,7 +652,7 @@ The adversarial model `[[169,195]]` makes token 256 expand to bytes `[169,195]`,
 ### Contract
 
 - Stage name: Reject invalid inputs cleanly
-- New observable behavior: every failure exits 1 with empty stdout and one JSON error object on stderr; commands validate input, filesystem boundaries, model structure, token-graph structure, and decode-token existence before success output.
+- New observable behavior: every failure exits 1 with one JSON error object on stderr; failures detected before output begins leave stdout empty, while a failed stdout write may leave an already-delivered prefix; commands validate input, filesystem boundaries, model structure, token-graph structure, and decode-token existence before success output.
 - Main concept: bytes, token IDs, user input, model definitions, and operating-system failures are different domains and require different validation.
 - Explicit non-goals: Unicode-text validity—the tokenizer preserves arbitrary bytes and does not reject a byte merely because it is not valid UTF-8 by itself.
 - Engineering status: `verified`
@@ -671,7 +673,7 @@ Learner reasoning, preserved from the stage discussion:
 - Important files and symbols: `tokenizerError`, `errorResponse`, and `codeForError` establish the four-code boundary; each command now checks explicit flags and classifies writes; `parseIDs` rejects malformed, null, non-integer, and negative arrays; `parseModel` decodes required fields without rejecting unknown fields; `validateModel` checks metadata, pair shape, operand availability, and duplicates; base and model decoding classify IDs outside their vocabulary as `unknown_token`.
 - Error codes: `invalid_input` covers command data and flags; `io_error` covers read/write failures; `invalid_model` covers JSON/schema/token-graph defects; `unknown_token` covers nonnegative decode IDs outside the validated vocabulary.
 - Model-graph invariant: merge entry `i` creates ID `256 + i`; both operands must be nonnegative and strictly smaller than that ID, so base and earlier learned tokens are allowed while self and future references are rejected.
-- Output invariant: validation completes before success output. On failure, `main` serializes exactly `{"error":"<code>"}` to stderr and exits 1; internal diagnostic details are not exposed as unstable public output.
+- Output invariant: validation completes before success output. On failure, `main` serializes exactly `{"error":"<code>"}` to stderr and exits 1; internal diagnostic details are not exposed as unstable public output. Pre-output failures leave stdout empty, but a writer that accepts a prefix and then fails can leave partial stdout that the program cannot retract.
 
 ### Evidence
 
@@ -681,7 +683,7 @@ Learner reasoning, preserved from the stage discussion:
 - Observed result: all 92 cumulative black-box executions passed after adding 25 Stage 12 cases and updating earlier model-loading failures to the final structured contract.
 - Measured implementation diff against accepted Stage 11: `app/main.go` changed by 177 additions and 47 deletions (224 lines of churn, net +130). Unit tests changed by 59 additions and 3 deletions. The new 25-case stage manifest adds 147 lines, and the earlier Stage 9 manifest changes 2 additions and 2 deletions to adopt the final JSON error contract.
 - Measured complete workspace diff against accepted Stage 11: 465 additions and 60 deletions across eight files, including 80 documentation/metadata additions and 8 documentation/metadata deletions. The complete 525-line churn is therefore not the amount of tokenizer code the learner must understand; the production-code portion is 224 changed lines.
-- What this proves: the four public error classes are structurally stable, stdout stays empty in covered failures, every specified invalid-model family is rejected, unknown bytes are not confused with unknown token IDs, and all earlier valid behavior remains active.
+- What this proves: the four public error classes are structurally stable, stdout stays empty in covered pre-output failures, a focused partial-writer test classifies an interrupted stdout write as `io_error` without pretending its accepted prefix can be erased, every specified invalid-model family is rejected, unknown bytes are not confused with unknown token IDs, and all earlier valid behavior remains active.
 - What this does not prove: resource-exhaustion safety for adversarially huge but structurally valid models, security hardening beyond the course contract, or learner acceptance of the stage size.
 
 ### Boundary examples

@@ -15,7 +15,7 @@ No tokenizer stage is defined during the harness checkpoint. A new draft begins 
 ./challenge new-stage --number 1 --slug encode-ascii --title "Encode ASCII text"
 ```
 
-A case can supply arguments, stdin as text or base64, temporary input files, a timeout, and repetitions. It can require an exit code; empty, exact-text, exact-byte, substring, or structural-JSON stdout and stderr; and generated file contents. Paths must remain within the runner's temporary case workspace.
+A case can supply arguments, stdin as text or base64, temporary input files, a timeout, and repetitions. It can require an exit code; empty, nonempty, exact-text, exact-byte, substring, or structural-JSON stdout and stderr; and generated file contents. An expected file can use `"same_as": "stdout"` to require byte-for-byte equality with captured stdout from the same process. Paths must remain within the runner's temporary case workspace.
 
 Example shape:
 

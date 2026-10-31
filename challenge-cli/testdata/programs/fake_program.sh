@@ -25,6 +25,10 @@ case "$mode" in
   write)
     printf '%s' "$2" > "$3"
     ;;
+  write-and-echo)
+    printf '%s' "$2" > "$3"
+    printf '%s' "${4:-$2}"
+    ;;
   timeout)
     exec sleep 5
     ;;

@@ -51,7 +51,8 @@ type InputFile struct {
 
 type ExpectedFile struct {
 	Path    string            `json:"path"`
-	Content OutputExpectation `json:"content"`
+	Content OutputExpectation `json:"content,omitempty"`
+	SameAs  string            `json:"same_as,omitempty"`
 }
 
 type Expectation struct {
@@ -127,8 +128,18 @@ func (testCase Case) Validate() error {
 		if err := validateRelativePath(file.Path); err != nil {
 			return fmt.Errorf("expected file %q: %w", file.Path, err)
 		}
-		if err := file.Content.Validate(); err != nil {
-			return fmt.Errorf("expected file %q: %w", file.Path, err)
+		hasContent := file.Content.Mode != ""
+		hasSameAs := file.SameAs != ""
+		if hasContent == hasSameAs {
+			return fmt.Errorf("expected file %q: exactly one of content or same_as is required", file.Path)
+		}
+		if hasContent {
+			if err := file.Content.Validate(); err != nil {
+				return fmt.Errorf("expected file %q: %w", file.Path, err)
+			}
+		}
+		if hasSameAs && file.SameAs != "stdout" {
+			return fmt.Errorf("expected file %q: same_as must be stdout", file.Path)
 		}
 	}
 	return nil
@@ -164,6 +175,10 @@ func (expectation OutputExpectation) Validate() error {
 	case "empty":
 		if expectation.Text != "" || expectation.Base64 != "" || len(expectation.JSON) != 0 {
 			return fmt.Errorf("empty mode cannot include a value")
+		}
+	case "nonempty":
+		if expectation.Text != "" || expectation.Base64 != "" || len(expectation.JSON) != 0 {
+			return fmt.Errorf("nonempty mode cannot include a value")
 		}
 	case "exact_text", "contains_text":
 		if expectation.Base64 != "" || len(expectation.JSON) != 0 {

@@ -68,6 +68,57 @@ func TestLoadDirectoryRejectsDuplicateNumbers(t *testing.T) {
 	}
 }
 
+func TestLoadDirectoryAcceptsExpectedFileMatchingStdout(t *testing.T) {
+	directory := t.TempDir()
+	writeManifest(t, directory, "01-first.json", `{
+  "version": 1,
+  "stage": 1,
+  "slug": "first",
+  "title": "First",
+  "cases": [{
+    "name": "matching file",
+    "expect": {
+      "stdout": {"mode": "empty"},
+      "stderr": {"mode": "empty"},
+      "exit_code": 0
+    },
+    "expected_files": [{"path": "model.json", "same_as": "stdout"}]
+  }]
+}`)
+
+	if _, err := LoadDirectory(directory); err != nil {
+		t.Fatalf("LoadDirectory() error = %v", err)
+	}
+}
+
+func TestLoadDirectoryRejectsAmbiguousExpectedFileComparison(t *testing.T) {
+	directory := t.TempDir()
+	writeManifest(t, directory, "01-first.json", `{
+  "version": 1,
+  "stage": 1,
+  "slug": "first",
+  "title": "First",
+  "cases": [{
+    "name": "ambiguous file",
+    "expect": {
+      "stdout": {"mode": "empty"},
+      "stderr": {"mode": "empty"},
+      "exit_code": 0
+    },
+    "expected_files": [{
+      "path": "model.json",
+      "content": {"mode": "empty"},
+      "same_as": "stdout"
+    }]
+  }]
+}`)
+
+	_, err := LoadDirectory(directory)
+	if err == nil || !strings.Contains(err.Error(), "exactly one of content or same_as") {
+		t.Fatalf("LoadDirectory() error = %v, want comparison ambiguity", err)
+	}
+}
+
 func writeManifest(t *testing.T, directory string, name string, contents string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(directory, name), []byte(contents), 0o644); err != nil {

@@ -9,10 +9,39 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"reflect"
 	"testing"
 )
+
+type prefixThenErrorWriter struct {
+	bytes.Buffer
+	limit int
+}
+
+func (writer *prefixThenErrorWriter) Write(data []byte) (int, error) {
+	remaining := writer.limit - writer.Len()
+	if remaining < 0 {
+		remaining = 0
+	}
+	if remaining > len(data) {
+		remaining = len(data)
+	}
+	written, _ := writer.Buffer.Write(data[:remaining])
+	return written, io.ErrClosedPipe
+}
+
+func TestRunClassifiesStdoutFailureAfterPartialWrite(t *testing.T) {
+	stdout := &prefixThenErrorWriter{limit: 4}
+	err := run([]string{"encode", "--text", "Hi"}, stdout)
+	if codeForError(err) != errIO {
+		t.Fatalf("run() error = %v, code = %q; want %q", err, codeForError(err), errIO)
+	}
+	if got, want := stdout.String(), "[72,"; got != want {
+		t.Fatalf("partial stdout = %q, want %q", got, want)
+	}
+}
 
 func TestEncodeBytes(t *testing.T) {
 	tests := []struct {

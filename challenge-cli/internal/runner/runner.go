@@ -123,6 +123,13 @@ func RunCase(parent context.Context, config Config, testCase spec.Case) Result {
 			result.Failure = fmt.Sprintf("expected file %s: %v", expectedFile.Path, err)
 			return result
 		}
+		if expectedFile.SameAs == "stdout" {
+			if !bytes.Equal(contents, result.Stdout) {
+				result.Failure = fmt.Sprintf("file %s: got %q, want exact stdout bytes %q", expectedFile.Path, contents, result.Stdout)
+				return result
+			}
+			continue
+		}
 		if failure := compareOutput("file "+expectedFile.Path, contents, expectedFile.Content); failure != "" {
 			result.Failure = failure
 			return result
@@ -155,6 +162,10 @@ func compareOutput(label string, actual []byte, expectation spec.OutputExpectati
 	case "empty":
 		if len(actual) != 0 {
 			return fmt.Sprintf("%s: got %q, want empty", label, actual)
+		}
+	case "nonempty":
+		if len(actual) == 0 {
+			return fmt.Sprintf("%s: got empty, want nonempty", label)
 		}
 	case "exact_text":
 		if !bytes.Equal(actual, []byte(expectation.Text)) {

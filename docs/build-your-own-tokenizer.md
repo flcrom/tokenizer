@@ -9,9 +9,9 @@
 
 ## A 12-stage byte-level BPE challenge
 
-Build a small tokenizer that learns merge rules from a corpus, saves them, and uses them to turn new text into token IDs and back into the original bytes.
+Build a small [tokenizer](https://huggingface.co/docs/transformers/tokenizer_summary) that learns [merge rules](https://huggingface.co/learn/llm-course/en/chapter6/5) from a training [corpus](https://huggingface.co/learn/llm-course/en/chapter6/5), saves them, and uses them to turn new text into [token IDs](https://huggingface.co/docs/tokenizers/en/api/encoding) and back into the original bytes.
 
-The challenge is cumulative. Each stage adds one observable behavior to the same command-line program. The examples are deliberately small enough to trace by hand, while the final program contains the complete train-encode-decode core of a byte-level Byte Pair Encoding tokenizer.
+The challenge is cumulative. Each stage adds one observable behavior to the same command-line program. The examples are deliberately small enough to trace by hand, while the final program contains the complete train-encode-decode core of a byte-level [Byte Pair Encoding (BPE)](https://huggingface.co/docs/transformers/tokenizer_summary#byte-pair-encoding-bpe) tokenizer.
 
 This is an AI-assisted learning challenge. AI may write substantial amounts of code, but the learner should predict small examples, inspect the important implementation paths, understand the tests, and be able to explain why the resulting behavior is correct.
 
@@ -168,7 +168,7 @@ Successful `encode`, `pairs`, and `train` commands print one JSON value followed
 
 Successful `decode` writes raw bytes with no added newline.
 
-After the final stage, every failure exits with status `1`, leaves stdout empty, and writes one JSON error object to stderr.
+After the final stage, every failure exits with status `1` and writes one JSON error object to stderr. Failures discovered before output begins leave stdout empty. If writing stdout itself fails, a prefix may already have been delivered and cannot be withdrawn.
 
 ## The model format
 
@@ -395,6 +395,7 @@ rule 2:  [257,258,32,257,258]
 - Assign learned IDs consecutively from `256`.
 - Append each selected pair to the model in learning order.
 - Allow a new rule to contain an earlier learned ID.
+- The Stage 6 fixtures always contain enough repeated pairs to learn all `N` requested rules. Stopping before the budget is introduced in Stage 7.
 
 #### Objective checks
 
@@ -454,7 +455,7 @@ $ ./your_program.sh train --input corpus.txt --merges 3 --output model.json
 
 - Equivalent text and file bytes learn the same model.
 - The requested model file exists after the process exits.
-- Parsed file and stdout models are equal.
+- The saved file bytes are exactly equal to stdout bytes from the same invocation.
 - Preserve newline bytes and arbitrary non-UTF-8 corpus bytes.
 
 ### Stage 9: Load an empty model
@@ -482,7 +483,7 @@ $ ./your_program.sh encode --model empty.json --text 'Hi!'
 - Do not depend on in-memory state from a previous training process.
 - Accept ordinary JSON whitespace and reordered object keys.
 - Preserve no-model encoding behavior.
-- At this stage, a missing path or malformed JSON must fail without stdout; the final error codes arrive in Stage 12.
+- At this stage, a missing path or malformed JSON must exit nonzero, produce no stdout, and provide some diagnostic on stderr. Its exact format is deliberately unrestricted; the stable JSON error codes arrive in Stage 12.
 
 #### Objective checks
 
@@ -626,6 +627,8 @@ Use this when an operating-system read or write fails:
 - unwritable output path;
 - failed stdout write.
 
+Read, validation, and output-file failures happen before success output and therefore leave stdout empty. A stdout-write failure is different: the destination may accept a prefix and then fail, so partial stdout is permitted for that one error path.
+
 #### `invalid_model`
 
 Use this when a readable model does not satisfy the contract:
@@ -660,7 +663,8 @@ Rule `i` creates ID `256 + i`. Both operands must be smaller than that new ID:
 #### Objective checks
 
 - Cover all four public error codes.
-- Require status `1`, empty stdout, and structural JSON on stderr.
+- Require status `1` and structural JSON on stderr.
+- Require empty stdout for failures detected before output begins; permit a partial prefix only when writing stdout itself fails.
 - Reject malformed command values before producing success output.
 - Reject every invalid-model family above.
 - Confirm unknown extra fields do not break a valid model.
@@ -739,7 +743,7 @@ Concatenating expansions for `[257,258,33]` produces the exact bytes for `banana
 
 ## How the challenge is tested
 
-The local suite contains 90 declared black-box cases and 92 process executions; one priority-sensitive case runs three times. The final cumulative command is:
+The local suite contains 90 declared black-box cases and 94 process executions; two priority-sensitive cases run three times. The final cumulative command is:
 
 ```console
 $ ./challenge test --stage 12 --previous

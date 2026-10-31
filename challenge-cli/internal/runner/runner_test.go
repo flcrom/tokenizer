@@ -72,6 +72,25 @@ func TestRunCaseChecksExitCode(t *testing.T) {
 	assertPassed(t, result)
 }
 
+func TestRunCaseAcceptsAnyNonemptyDiagnostic(t *testing.T) {
+	result := RunCase(context.Background(), fixtureConfig(t), spec.Case{
+		Name: "nonempty stderr",
+		Args: []string{"fail"},
+		Expect: spec.Expectation{
+			Stdout:   spec.OutputExpectation{Mode: "empty"},
+			Stderr:   spec.OutputExpectation{Mode: "nonempty"},
+			ExitCode: 7,
+		},
+	})
+	assertPassed(t, result)
+}
+
+func TestCompareOutputRejectsEmptyWhenNonemptyExpected(t *testing.T) {
+	if failure := compareOutput("stderr", nil, spec.OutputExpectation{Mode: "nonempty"}); failure == "" {
+		t.Fatal("compareOutput() accepted empty output for nonempty expectation")
+	}
+}
+
 func TestRunCaseChecksCreatedFiles(t *testing.T) {
 	result := RunCase(context.Background(), fixtureConfig(t), spec.Case{
 		Name: "file",
@@ -91,6 +110,36 @@ func TestRunCaseChecksCreatedFiles(t *testing.T) {
 		}},
 	})
 	assertPassed(t, result)
+}
+
+func TestRunCaseComparesCreatedFileWithStdout(t *testing.T) {
+	result := RunCase(context.Background(), fixtureConfig(t), spec.Case{
+		Name: "file matches stdout",
+		Args: []string{"write-and-echo", "model", "model.json"},
+		Expect: spec.Expectation{
+			Stdout:   spec.OutputExpectation{Mode: "exact_text", Text: "model"},
+			Stderr:   spec.OutputExpectation{Mode: "empty"},
+			ExitCode: 0,
+		},
+		ExpectedFiles: []spec.ExpectedFile{{Path: "model.json", SameAs: "stdout"}},
+	})
+	assertPassed(t, result)
+}
+
+func TestRunCaseRejectsCreatedFileDifferentFromStdout(t *testing.T) {
+	result := RunCase(context.Background(), fixtureConfig(t), spec.Case{
+		Name: "file differs from stdout",
+		Args: []string{"write-and-echo", "file model", "model.json", "stdout model"},
+		Expect: spec.Expectation{
+			Stdout:   spec.OutputExpectation{Mode: "exact_text", Text: "stdout model"},
+			Stderr:   spec.OutputExpectation{Mode: "empty"},
+			ExitCode: 0,
+		},
+		ExpectedFiles: []spec.ExpectedFile{{Path: "model.json", SameAs: "stdout"}},
+	})
+	if result.Passed || result.Failure == "" {
+		t.Fatalf("RunCase() result = %#v, want file/stdout mismatch", result)
+	}
 }
 
 func TestRunCaseEnforcesTimeout(t *testing.T) {

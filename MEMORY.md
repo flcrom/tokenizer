@@ -82,7 +82,7 @@ Before changing files, identify the smallest change set, inspect direct dependen
 ## Current state
 
 - Phase: 5 complete; all twelve revised implementation stages are accepted and checkpointed, and integrated validation plus final challenge documentation are next.
-- Completed: accepted and checkpointed Stages 1–12; four-code structured failures; CLI, I/O, strict model-graph, and unknown-token validation; focused unit tests; 92 cumulative black-box executions; and a complete first draft of the standalone 12-stage Markdown challenge.
+- Completed: accepted and checkpointed Stages 1–12; four-code structured failures; CLI, I/O, strict model-graph, and unknown-token validation; focused unit tests; 94 cumulative black-box executions; and a complete first draft of the standalone 12-stage Markdown challenge.
 - Not completed: learner review and acceptance of the final challenge draft, Phase 6 integrated validation, practical performance evidence on a modest corpus, or the final retrospective.
 - Protected input: `resources/Build your own Tokenizer.pdf` remains unchanged.
 - Git policy: `main` is the living workspace; `stages` is the curated history of the shared scaffold followed by accepted cumulative stage checkpoints.
@@ -173,6 +173,10 @@ Original Stage 16 provisionally becomes revised Stage 12 without an advance spli
 ### 2026-10-23 — Keep and accept source Stage 16 as revised Stage 12
 
 After reviewing the verified implementation and its measured diff, the learner kept source Stage 16 whole. The production code changed by 177 additions and 47 deletions; most remaining repository churn came from the 25-case black-box manifest, focused tests, and documentation. The learner accepted the stage as one coherent final validation boundary, completing Phase 5 with all twelve revised stages checkpointed.
+
+### 2026-10-31 — Refine review-sensitive stage boundaries and failure assertions
+
+Stage 5 now repeats a tie-sensitive case in three fresh processes. Stage 6 states that its fixtures always permit the full requested merge count, leaving early completion to Stage 7. Stage 9 still requires missing or malformed models to fail with nonzero status, empty stdout, and a diagnostic, but does not prescribe Stage 12's later JSON error codes. Stage 12 requires empty stdout only for failures detected before output begins; an actual stdout-write failure may retain a prefix already accepted by the writer, and a focused unit test exercises that boundary.
 
 ### 2026-10-23 — Keep the final challenge language-agnostic
 
